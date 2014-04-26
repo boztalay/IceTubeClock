@@ -1,23 +1,94 @@
 #include <avr/io.h>
-#include <avr/interrupt.h>
+
+#define BOOST_DEFAULT_DUTY 130 //About 50.9%
+#define BOOST_TARGET 935 //Should be regulating it to about 56 volts
+#define BOOST_LIMIT 10
+
+void setUpSystemClock(void);
+
+void setUpBoostSupplyPWM(void);
+void setBoostSupplyDutyCycle(uint8_t);
+void setUpBoostSupplyVoltageMonitor(void);
+void process_boostSupplyVoltageMonitor(void);
+uint16_t getBoostSupplyVoltage(void);
 
 int main(void) {
-	// Set up the system clock
-	// First, tell it we want to change the prescaler
-	CLKPR = 0x80;
-	// Then, set the prescaler to 1 (should give us 8MHz)
+	setUpSystemClock();
+
+	setUpBoostSupplyPWM();
+	setUpBoostSupplyVoltageMonitor();
+
+	while(1) {
+		process_boostSupplyVoltageMonitor();
+	}
+}
+
+void setUpSystemClock() {
+	//Notify it that we want to change the prescaler
+	CLKPR = _BV(CLKPCE);
+
+	//Set the prescaler to 1 (should give us 8MHz)
 	CLKPR = 0x00;
+}
 
-	PORTD=0x00;
-	DDRD=0x40;  //We use PORTB.6 as output, for OC0A, see the atmega8 reference manual
+void setUpBoostSupplyPWM() {
+	//Set up PORTD.6 as our PWM output, which is for OC0A
+	PORTD = 0x00;
+	DDRD = _BV(DDD6);
 
-	// Mode: Phase correct PWM top=0xFF
-	// OC2A output: Non-Inverted PWM
-	TCCR0A=0x81;
-	// Set the speed here, it will depend on your clock rate.
-	TCCR0B=0x01;
+	//Set up Timer0 OC0A for Phase-Correct Non-Inverted PWM
+	TCCR0A = _BV(COM0A1) | _BV(WGM00);
 
-	OCR0A = 130; //50.9% duty cycle
+	//Set the clk_io prescaler to 1, so we should get about 16KHz
+	TCCR0B = _BV(CS00);
 
-	while(1) { }
+	//Set the boost supply to the default duty cycle
+	setBoostSupplyDutyCycle(BOOST_DEFAULT_DUTY);
+}
+
+void setBoostSupplyDutyCycle(uint8_t dutyCycle) {
+	//Set the PWM output compare register to the duty cycle value
+	//Actual duty cycle should be dutyCycle / 255
+	OCR0A = dutyCycle;
+}
+
+void setUpBoostSupplyVoltageMonitor() {
+	//Enable the ADC and set its clock prescaler to 128
+	ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
+}
+
+void process_boostSupplyVoltageMonitor() {
+	static uint16_t callsSinceLastCheck = 0; //Remember static variables only get initialized once
+	static uint8_t currentDutyCycle = BOOST_DEFAULT_DUTY;
+
+	callsSinceLastCheck++;
+	if(callsSinceLastCheck > 1000) {
+		uint16_t boostVoltage = getBoostSupplyVoltage();
+		
+		if(boostVoltage > BOOST_TARGET + BOOST_LIMIT) {
+			currentDutyCycle--;
+		} else if(boostVoltage < BOOST_TARGET - BOOST_LIMIT) {
+			currentDutyCycle++;
+		}
+
+		setBoostSupplyDutyCycle(currentDutyCycle);
+		callsSinceLastCheck = 0;
+	}
+}
+
+uint16_t getBoostSupplyVoltage() {
+	//Select channel 0 to read from
+	ADMUX = (ADMUX & 0xF0);
+
+	//Start the conversion
+	ADCSRA |= _BV(ADSC);
+
+	//Wait for the conversion to finish
+	while(!bit_is_set(ADCSRA, ADIF)) { }
+
+	//Clear ADIF
+	ADCSRA |= _BV(ADIF);
+
+	//ADC holds our value
+	return ADC;
 }
