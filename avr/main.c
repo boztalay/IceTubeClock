@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include <util/delay.h>
 
 #define BOOST_DEFAULT_DUTY 130 //About 50.9%
 #define BOOST_TARGET 935 //Should be regulating it to about 56 volts
@@ -9,6 +10,9 @@ void setUpSystemClock(void);
 void setUpBoostSupplyPWM(void);
 void setBoostSupplyDutyCycle(uint8_t);
 void setUpBoostSupplyVoltageMonitor(void);
+
+void waitForTubeWarmup(void);
+
 void process_boostSupplyVoltageMonitor(void);
 uint16_t getBoostSupplyVoltage(void);
 
@@ -18,8 +22,10 @@ int main(void) {
 	setUpBoostSupplyPWM();
 	setUpBoostSupplyVoltageMonitor();
 
+	waitForTubeWarmup();
+
 	while(1) {
-		process_boostSupplyVoltageMonitor();
+//		process_boostSupplyVoltageMonitor();
 	}
 }
 
@@ -57,12 +63,16 @@ void setUpBoostSupplyVoltageMonitor() {
 	ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
 }
 
+void waitForTubeWarmup() {
+	_delay_ms(1250);
+}
+
 void process_boostSupplyVoltageMonitor() {
 	static uint16_t callsSinceLastCheck = 0; //Remember static variables only get initialized once
 	static uint8_t currentDutyCycle = BOOST_DEFAULT_DUTY;
 
 	callsSinceLastCheck++;
-	if(callsSinceLastCheck > 1000) {
+	if(callsSinceLastCheck > 25000) {
 		uint16_t boostVoltage = getBoostSupplyVoltage();
 		
 		if(boostVoltage > BOOST_TARGET + BOOST_LIMIT) {
