@@ -10,19 +10,67 @@ void setUpSystemClock(void);
 void setUpBoostSupplyPWM(void);
 void setBoostSupplyDutyCycle(uint8_t);
 void setUpBoostSupplyVoltageMonitor(void);
+void setUpTubeDriverInterface(void);
 
 void waitForTubeWarmup(void);
 
 void process_boostSupplyVoltageMonitor(void);
 uint16_t getBoostSupplyVoltage(void);
 
+void sendBitToTubeDrivers(uint8_t);
+void latchTubeDrivers(void);
+
 int main(void) {
 	setUpSystemClock();
 
 	setUpBoostSupplyPWM();
 	setUpBoostSupplyVoltageMonitor();
+	setUpTubeDriverInterface();
 
 	waitForTubeWarmup();
+
+	//Driver is connected to the tube like so:
+	//OUT0	NC
+	//OUT1	Tube 0 A
+	//OUT2	Tube 0 B
+	//OUT3	Tube 0 C
+	//OUT4	Tube 0 D
+	//OUT5	Tube 0 E
+	//OUT6	Tube 0 F
+	//OUT7	Tube 0 G
+	//OUT8	Tube 0 H
+	//OUT9	Tube 0 GRID
+	//OUT10	Tube 1 A
+	//OUT11	Tube 1 B
+	//OUT12	Tube 1 C
+	//OUT13	Tube 1 D
+	//OUT14	Tube 1 E
+	//OUT15	Tube 1 F
+	//OUT16	Tube 1 G
+	//OUT17	Tube 1 H
+	//OUT18	Tube 1 GRID
+	//OUT19	NC
+
+	sendBitToTubeDrivers(1);	//Tube 1 GRID
+	sendBitToTubeDrivers(0);	//Tube 1 H
+	sendBitToTubeDrivers(0);	//Tube 1 G
+	sendBitToTubeDrivers(1);	//Tube 1 F
+	sendBitToTubeDrivers(1);	//Tube 1 E
+	sendBitToTubeDrivers(1);	//Tube 1 D
+	sendBitToTubeDrivers(0);	//Tube 1 C
+	sendBitToTubeDrivers(1);	//Tube 1 B
+	sendBitToTubeDrivers(1);	//Tube 1 A
+	sendBitToTubeDrivers(1);	//Tube 0 GRID
+	sendBitToTubeDrivers(1);	//Tube 0 H
+	sendBitToTubeDrivers(0);	//Tube 0 G
+	sendBitToTubeDrivers(1);	//Tube 0 F
+	sendBitToTubeDrivers(0);	//Tube 0 E
+	sendBitToTubeDrivers(1);	//Tube 0 D
+	sendBitToTubeDrivers(1);	//Tube 0 C
+	sendBitToTubeDrivers(0);	//Tube 0 B
+	sendBitToTubeDrivers(0);	//Tube 0 A
+	sendBitToTubeDrivers(0);	//NC, need it to push everything up
+	latchTubeDrivers();
 
 	while(1) {
 //		process_boostSupplyVoltageMonitor();
@@ -63,8 +111,42 @@ void setUpBoostSupplyVoltageMonitor() {
 	ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
 }
 
+void setUpTubeDriverInterface() {
+	//Pins
+	//PORTB.4	DIN
+	//PORTB.3	LOAD
+	//PORTB.2	CLK
+	//PORTB.1	BLANK
+	
+	//Driver is connected to the tube like so:
+	//OUT0	NC
+	//OUT1	Tube 0 A
+	//OUT2	Tube 0 B
+	//OUT3	Tube 0 C
+	//OUT4	Tube 0 D
+	//OUT5	Tube 0 E
+	//OUT6	Tube 0 F
+	//OUT7	Tube 0 G
+	//OUT8	Tube 0 H
+	//OUT9	Tube 0 GRID
+	//OUT10	Tube 1 A
+	//OUT11	Tube 1 B
+	//OUT12	Tube 1 C
+	//OUT13	Tube 1 D
+	//OUT14	Tube 1 E
+	//OUT15	Tube 1 F
+	//OUT16	Tube 1 G
+	//OUT17	Tube 1 H
+	//OUT18	Tube 1 GRID
+	//OUT19	NC
+	
+	//Set up all of the interface pins as output, outputs to 0
+	PORTB = 0x00;
+	DDRB = _BV(DDB4) | _BV(DDB3) | _BV(DDB2) | _BV(DDB1);
+}
+
 void waitForTubeWarmup() {
-	_delay_ms(1250);
+	_delay_ms(500);
 }
 
 void process_boostSupplyVoltageMonitor() {
@@ -101,4 +183,25 @@ uint16_t getBoostSupplyVoltage() {
 
 	//ADC holds our value
 	return ADC;
+}
+
+void sendBitToTubeDrivers(uint8_t bit) {
+	//Set DIN according to the bit
+	if(bit == 0) {
+		//Set DIN to 0
+		PORTB &= ~_BV(PINB4);
+	} else {
+		//Set DIN to 1
+		PORTB |= _BV(PINB4);
+	}
+
+	//Toggle the clock, 1 then 0
+	PORTB |= _BV(PINB2);
+	PORTB &= ~_BV(PINB2);
+}
+
+void latchTubeDrivers() {
+	//Toggle LATCH, 1 then 0
+	PORTB |= _BV(PINB3);
+	PORTB &= ~_BV(PINB3);
 }
