@@ -1,0 +1,974 @@
+   1               		.file	"main.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	setUpSystemClock
+  12               	setUpSystemClock:
+  13               	.LFB7:
+  14               		.file 1 "main.c"
+   1:main.c        **** #include <avr/io.h>
+   2:main.c        **** #include <util/delay.h>
+   3:main.c        **** 
+   4:main.c        **** #define BOOST_DEFAULT_DUTY 130 //About 70.6%
+   5:main.c        **** #define BOOST_TARGET 935 //Should be regulating it to about 56 volts
+   6:main.c        **** #define BOOST_LIMIT 10
+   7:main.c        **** 
+   8:main.c        **** void setUpSystemClock(void);
+   9:main.c        **** 
+  10:main.c        **** void setUpBoostSupplyPWM(void);
+  11:main.c        **** void setBoostSupplyDutyCycle(uint8_t);
+  12:main.c        **** void setUpBoostSupplyVoltageMonitor(void);
+  13:main.c        **** void setUpTubeDriverInterface(void);
+  14:main.c        **** 
+  15:main.c        **** void waitForTubeWarmup(void);
+  16:main.c        **** 
+  17:main.c        **** void process_boostSupplyVoltageMonitor(void);
+  18:main.c        **** uint16_t getBoostSupplyVoltage(void);
+  19:main.c        **** 
+  20:main.c        **** void sendBitToTubeDrivers(uint8_t);
+  21:main.c        **** void latchTubeDrivers(void);
+  22:main.c        **** 
+  23:main.c        **** int main(void) {
+  24:main.c        **** 	setUpSystemClock();
+  25:main.c        **** 
+  26:main.c        **** 	setUpBoostSupplyPWM();
+  27:main.c        **** 	setUpBoostSupplyVoltageMonitor();
+  28:main.c        **** 	setUpTubeDriverInterface();
+  29:main.c        **** 
+  30:main.c        **** 	waitForTubeWarmup();
+  31:main.c        **** 
+  32:main.c        **** 	//Drivers are connected to the tubes like so:
+  33:main.c        **** 	//OUT0	NC
+  34:main.c        **** 	//OUT1	Tube 0 A
+  35:main.c        **** 	//OUT2	Tube 0 B
+  36:main.c        **** 	//OUT3	Tube 0 C
+  37:main.c        **** 	//OUT4	Tube 0 D
+  38:main.c        **** 	//OUT5	Tube 0 E
+  39:main.c        **** 	//OUT6	Tube 0 F
+  40:main.c        **** 	//OUT7	Tube 0 G
+  41:main.c        **** 	//OUT8	Tube 0 H
+  42:main.c        **** 	//OUT9	Tube 0 GRID
+  43:main.c        **** 	//OUT10	Tube 1 A
+  44:main.c        **** 	//OUT11	Tube 1 B
+  45:main.c        **** 	//OUT12	Tube 1 C
+  46:main.c        **** 	//OUT13	Tube 1 D
+  47:main.c        **** 	//OUT14	Tube 1 E
+  48:main.c        **** 	//OUT15	Tube 1 F
+  49:main.c        **** 	//OUT16	Tube 1 G
+  50:main.c        **** 	//OUT17	Tube 1 H
+  51:main.c        **** 	//OUT18	Tube 1 GRID
+  52:main.c        **** 	//OUT19	NC
+  53:main.c        **** 	//OUT0	NC
+  54:main.c        **** 	//OUT1	Tube 2 A
+  55:main.c        **** 	//OUT2	Tube 2 B
+  56:main.c        **** 	//OUT3	Tube 2 C
+  57:main.c        **** 	//OUT4	Tube 2 D
+  58:main.c        **** 	//OUT5	Tube 2 E
+  59:main.c        **** 	//OUT6	Tube 2 F
+  60:main.c        **** 	//OUT7	Tube 2 G
+  61:main.c        **** 	//OUT8	Tube 2 H
+  62:main.c        **** 	//OUT9	Tube 2 GRID
+  63:main.c        **** 	//OUT10	Tube 3 A
+  64:main.c        **** 	//OUT11	Tube 3 B
+  65:main.c        **** 	//OUT12	Tube 3 C
+  66:main.c        **** 	//OUT13	Tube 3 D
+  67:main.c        **** 	//OUT14	Tube 3 E
+  68:main.c        **** 	//OUT15	Tube 3 F
+  69:main.c        **** 	//OUT16	Tube 3 G
+  70:main.c        **** 	//OUT17	Tube 3 H
+  71:main.c        **** 	//OUT18	Tube 3 GRID
+  72:main.c        **** 	//OUT19	NC
+  73:main.c        **** 
+  74:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 3 GRID
+  75:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 3 H
+  76:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 3 G
+  77:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 3 F
+  78:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 3 E
+  79:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 3 D
+  80:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 3 C
+  81:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 3 B
+  82:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 3 A
+  83:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 2 GRID
+  84:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 2 H
+  85:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 2 G
+  86:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 2 F
+  87:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 2 E
+  88:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 2 D
+  89:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 2 C
+  90:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 2 B
+  91:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 2 A
+  92:main.c        **** 	sendBitToTubeDrivers(0);	//NC
+  93:main.c        **** 	sendBitToTubeDrivers(0);	//NC
+  94:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 1 GRID
+  95:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 1 H
+  96:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 1 G
+  97:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 1 F
+  98:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 1 E
+  99:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 1 D
+ 100:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 1 C
+ 101:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 1 B
+ 102:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 1 A
+ 103:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 0 GRID
+ 104:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 0 H
+ 105:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 0 G
+ 106:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 0 F
+ 107:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 0 E
+ 108:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 0 D
+ 109:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 0 C
+ 110:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 0 B
+ 111:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 0 A
+ 112:main.c        **** 	sendBitToTubeDrivers(0);	//NC, need it to push everything up
+ 113:main.c        **** 	latchTubeDrivers();
+ 114:main.c        **** 
+ 115:main.c        **** 	while(1) {
+ 116:main.c        **** //		process_boostSupplyVoltageMonitor();
+ 117:main.c        **** 	}
+ 118:main.c        **** }
+ 119:main.c        **** 
+ 120:main.c        **** void setUpSystemClock() {
+  15               		.loc 1 120 0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+ 121:main.c        **** 	//Notify it that we want to change the prescaler
+ 122:main.c        **** 	CLKPR = _BV(CLKPCE);
+  21               		.loc 1 122 0
+  22 0000 E1E6      		ldi r30,lo8(97)
+  23 0002 F0E0      		ldi r31,0
+  24 0004 80E8      		ldi r24,lo8(-128)
+  25 0006 8083      		st Z,r24
+ 123:main.c        **** 
+ 124:main.c        **** 	//Set the prescaler to 1 (should give us 8MHz)
+ 125:main.c        **** 	CLKPR = 0x00;
+  26               		.loc 1 125 0
+  27 0008 1082      		st Z,__zero_reg__
+  28 000a 0895      		ret
+  29               		.cfi_endproc
+  30               	.LFE7:
+  32               	.global	setUpBoostSupplyPWM
+  34               	setUpBoostSupplyPWM:
+  35               	.LFB8:
+ 126:main.c        **** }
+ 127:main.c        **** 
+ 128:main.c        **** void setUpBoostSupplyPWM() {
+  36               		.loc 1 128 0
+  37               		.cfi_startproc
+  38               	/* prologue: function */
+  39               	/* frame size = 0 */
+  40               	/* stack size = 0 */
+  41               	.L__stack_usage = 0
+ 129:main.c        **** 	//Set up PORTD.6 as our PWM output, which is for OC0A
+ 130:main.c        **** 	PORTD = 0x00;
+  42               		.loc 1 130 0
+  43 000c 1BB8      		out 0xb,__zero_reg__
+ 131:main.c        **** 	DDRD = _BV(DDD6);
+  44               		.loc 1 131 0
+  45 000e 80E4      		ldi r24,lo8(64)
+  46 0010 8AB9      		out 0xa,r24
+ 132:main.c        **** 
+ 133:main.c        **** 	//Set up Timer0 OC0A for Phase-Correct Non-Inverted PWM
+ 134:main.c        **** 	TCCR0A = _BV(COM0A1) | _BV(WGM00);
+  47               		.loc 1 134 0
+  48 0012 81E8      		ldi r24,lo8(-127)
+  49 0014 84BD      		out 0x24,r24
+ 135:main.c        **** 
+ 136:main.c        **** 	//Set the clk_io prescaler to 1, so we should get about 16KHz
+ 137:main.c        **** 	TCCR0B = _BV(CS00);
+  50               		.loc 1 137 0
+  51 0016 81E0      		ldi r24,lo8(1)
+  52 0018 85BD      		out 0x25,r24
+  53               	.LVL0:
+  54               	.LBB15:
+  55               	.LBB16:
+ 138:main.c        **** 
+ 139:main.c        **** 	//Set the boost supply to the default duty cycle
+ 140:main.c        **** 	setBoostSupplyDutyCycle(BOOST_DEFAULT_DUTY);
+ 141:main.c        **** }
+ 142:main.c        **** 
+ 143:main.c        **** void setBoostSupplyDutyCycle(uint8_t dutyCycle) {
+ 144:main.c        **** 	//Set the PWM output compare register to the duty cycle value
+ 145:main.c        **** 	//Actual duty cycle should be dutyCycle / 255
+ 146:main.c        **** 	OCR0A = dutyCycle;
+  56               		.loc 1 146 0
+  57 001a 82E8      		ldi r24,lo8(-126)
+  58 001c 87BD      		out 0x27,r24
+  59 001e 0895      		ret
+  60               	.LBE16:
+  61               	.LBE15:
+  62               		.cfi_endproc
+  63               	.LFE8:
+  65               	.global	setBoostSupplyDutyCycle
+  67               	setBoostSupplyDutyCycle:
+  68               	.LFB9:
+ 143:main.c        **** void setBoostSupplyDutyCycle(uint8_t dutyCycle) {
+  69               		.loc 1 143 0
+  70               		.cfi_startproc
+  71               	.LVL1:
+  72               	/* prologue: function */
+  73               	/* frame size = 0 */
+  74               	/* stack size = 0 */
+  75               	.L__stack_usage = 0
+  76               		.loc 1 146 0
+  77 0020 87BD      		out 0x27,r24
+  78 0022 0895      		ret
+  79               		.cfi_endproc
+  80               	.LFE9:
+  82               	.global	setUpBoostSupplyVoltageMonitor
+  84               	setUpBoostSupplyVoltageMonitor:
+  85               	.LFB10:
+ 147:main.c        **** }
+ 148:main.c        **** 
+ 149:main.c        **** void setUpBoostSupplyVoltageMonitor() {
+  86               		.loc 1 149 0
+  87               		.cfi_startproc
+  88               	/* prologue: function */
+  89               	/* frame size = 0 */
+  90               	/* stack size = 0 */
+  91               	.L__stack_usage = 0
+ 150:main.c        **** 	//Enable the ADC and set its clock prescaler to 128
+ 151:main.c        **** 	ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
+  92               		.loc 1 151 0
+  93 0024 87E8      		ldi r24,lo8(-121)
+  94 0026 8093 7A00 		sts 122,r24
+  95 002a 0895      		ret
+  96               		.cfi_endproc
+  97               	.LFE10:
+  99               	.global	setUpTubeDriverInterface
+ 101               	setUpTubeDriverInterface:
+ 102               	.LFB11:
+ 152:main.c        **** }
+ 153:main.c        **** 
+ 154:main.c        **** void setUpTubeDriverInterface() {
+ 103               		.loc 1 154 0
+ 104               		.cfi_startproc
+ 105               	/* prologue: function */
+ 106               	/* frame size = 0 */
+ 107               	/* stack size = 0 */
+ 108               	.L__stack_usage = 0
+ 155:main.c        **** 	//Pins
+ 156:main.c        **** 	//PORTB.4	DIN
+ 157:main.c        **** 	//PORTB.3	LOAD
+ 158:main.c        **** 	//PORTB.2	CLK
+ 159:main.c        **** 	//PORTB.1	BLANK
+ 160:main.c        **** 	
+ 161:main.c        **** 	//Driver is connected to the tube like so:
+ 162:main.c        **** 	//OUT0	NC
+ 163:main.c        **** 	//OUT1	Tube 0 A
+ 164:main.c        **** 	//OUT2	Tube 0 B
+ 165:main.c        **** 	//OUT3	Tube 0 C
+ 166:main.c        **** 	//OUT4	Tube 0 D
+ 167:main.c        **** 	//OUT5	Tube 0 E
+ 168:main.c        **** 	//OUT6	Tube 0 F
+ 169:main.c        **** 	//OUT7	Tube 0 G
+ 170:main.c        **** 	//OUT8	Tube 0 H
+ 171:main.c        **** 	//OUT9	Tube 0 GRID
+ 172:main.c        **** 	//OUT10	Tube 1 A
+ 173:main.c        **** 	//OUT11	Tube 1 B
+ 174:main.c        **** 	//OUT12	Tube 1 C
+ 175:main.c        **** 	//OUT13	Tube 1 D
+ 176:main.c        **** 	//OUT14	Tube 1 E
+ 177:main.c        **** 	//OUT15	Tube 1 F
+ 178:main.c        **** 	//OUT16	Tube 1 G
+ 179:main.c        **** 	//OUT17	Tube 1 H
+ 180:main.c        **** 	//OUT18	Tube 1 GRID
+ 181:main.c        **** 	//OUT19	NC
+ 182:main.c        **** 	
+ 183:main.c        **** 	//Set up all of the interface pins as output, outputs to 0
+ 184:main.c        **** 	PORTB = 0x00;
+ 109               		.loc 1 184 0
+ 110 002c 15B8      		out 0x5,__zero_reg__
+ 185:main.c        **** 	DDRB = _BV(DDB4) | _BV(DDB3) | _BV(DDB2) | _BV(DDB1);
+ 111               		.loc 1 185 0
+ 112 002e 8EE1      		ldi r24,lo8(30)
+ 113 0030 84B9      		out 0x4,r24
+ 114 0032 0895      		ret
+ 115               		.cfi_endproc
+ 116               	.LFE11:
+ 118               	.global	waitForTubeWarmup
+ 120               	waitForTubeWarmup:
+ 121               	.LFB12:
+ 186:main.c        **** }
+ 187:main.c        **** 
+ 188:main.c        **** void waitForTubeWarmup() {
+ 122               		.loc 1 188 0
+ 123               		.cfi_startproc
+ 124               	/* prologue: function */
+ 125               	/* frame size = 0 */
+ 126               	/* stack size = 0 */
+ 127               	.L__stack_usage = 0
+ 128               	.LVL2:
+ 129               	.LBB17:
+ 130               	.LBB18:
+ 131               		.file 2 "/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h"
+   1:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** /* Copyright (c) 2002, Marek Michalkiewicz
+   2:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    Copyright (c) 2004,2005,2007 Joerg Wunsch
+   3:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    Copyright (c) 2007  Florin-Viorel Petrov
+   4:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    All rights reserved.
+   5:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+   6:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    Redistribution and use in source and binary forms, with or without
+   7:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    modification, are permitted provided that the following conditions are met:
+   8:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+   9:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    * Redistributions of source code must retain the above copyright
+  10:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****      notice, this list of conditions and the following disclaimer.
+  11:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  12:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    * Redistributions in binary form must reproduce the above copyright
+  13:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****      notice, this list of conditions and the following disclaimer in
+  14:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****      the documentation and/or other materials provided with the
+  15:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****      distribution.
+  16:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  17:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    * Neither the name of the copyright holders nor the names of
+  18:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****      contributors may be used to endorse or promote products derived
+  19:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****      from this software without specific prior written permission.
+  20:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  21:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  22:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  23:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  24:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  25:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  26:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  27:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  30:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  31:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   POSSIBILITY OF SUCH DAMAGE. */
+  32:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  33:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** /* $Id$ */
+  34:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  35:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #ifndef _UTIL_DELAY_H_
+  36:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #define _UTIL_DELAY_H_ 1
+  37:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  38:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #ifndef __HAS_DELAY_CYCLES
+  39:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #define __HAS_DELAY_CYCLES 1
+  40:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #endif
+  41:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  42:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #include <inttypes.h>
+  43:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #include <util/delay_basic.h>
+  44:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #include <math.h>
+  45:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  46:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** /** \file */
+  47:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** /** \defgroup util_delay <util/delay.h>: Convenience functions for busy-wait delay loops
+  48:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     \code
+  49:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     #define F_CPU 1000000UL  // 1 MHz
+  50:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     //#define F_CPU 14.7456E6
+  51:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     #include <util/delay.h>
+  52:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     \endcode
+  53:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  54:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     \note As an alternative method, it is possible to pass the
+  55:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     F_CPU macro down to the compiler from the Makefile.
+  56:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     Obviously, in that case, no \c \#define statement should be
+  57:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     used.
+  58:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  59:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     The functions in this header file are wrappers around the basic
+  60:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     busy-wait functions from <util/delay_basic.h>.  They are meant as
+  61:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     convenience functions where actual time values can be specified
+  62:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     rather than a number of cycles to wait for.  The idea behind is
+  63:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     that compile-time constant expressions will be eliminated by
+  64:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     compiler optimization so floating-point expressions can be used
+  65:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     to calculate the number of delay cycles needed based on the CPU
+  66:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     frequency passed by the macro F_CPU.
+  67:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  68:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     \note In order for these functions to work as intended, compiler
+  69:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     optimizations <em>must</em> be enabled, and the delay time
+  70:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     <em>must</em> be an expression that is a known constant at
+  71:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     compile-time.  If these requirements are not met, the resulting
+  72:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     delay will be much longer (and basically unpredictable), and
+  73:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     applications that otherwise do not use floating-point calculations
+  74:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     will experience severe code bloat by the floating-point library
+  75:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     routines linked into the application.
+  76:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  77:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     The functions available allow the specification of microsecond, and
+  78:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     millisecond delays directly, using the application-supplied macro
+  79:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     F_CPU as the CPU clock frequency (in Hertz).
+  80:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  81:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** */
+  82:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  83:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #if !defined(__DOXYGEN__)
+  84:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** static inline void _delay_us(double __us) __attribute__((always_inline));
+  85:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** static inline void _delay_ms(double __ms) __attribute__((always_inline));
+  86:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #endif
+  87:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  88:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #ifndef F_CPU
+  89:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** /* prevent compiler error by supplying a default */
+  90:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** # warning "F_CPU not defined for <util/delay.h>"
+  91:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** # define F_CPU 1000000UL
+  92:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #endif
+  93:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  94:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #ifndef __OPTIMIZE__
+  95:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+  96:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #endif
+  97:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+  98:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+  99:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 100:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   __STDC_HOSTED__
+ 101:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #  include <math.h>
+ 102:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #endif
+ 103:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+ 104:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** /**
+ 105:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    \ingroup util_delay
+ 106:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+ 107:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    Perform a delay of \c __ms milliseconds, using _delay_loop_2().
+ 108:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+ 109:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    The macro F_CPU is supposed to be defined to a
+ 110:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    constant defining the CPU clock frequency (in Hertz).
+ 111:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+ 112:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    The maximal possible delay is 262.14 ms / F_CPU in MHz.
+ 113:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+ 114:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    When the user request delay which exceed the maximum possible one,
+ 115:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    _delay_ms() provides a decreased resolution functionality. In this
+ 116:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    mode _delay_ms() will work with a resolution of 1/10 ms, providing
+ 117:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    delays up to 6.5535 seconds (independent from CPU frequency).  The
+ 118:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    user will not be informed about decreased resolution.
+ 119:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+ 120:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    If the avr-gcc toolchain has __builtin_avr_delay_cycles(unsigned long)
+ 121:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    support, maximal possible delay is 4294967.295 ms/ F_CPU in MHz. For
+ 122:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    values greater than the maximal possible delay, overflows results in
+ 123:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    no delay i.e., 0ms.
+ 124:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+ 125:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    Conversion of __us into clock cycles may not always result in integer.
+ 126:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    By default, the clock cycles rounded up to next integer. This ensures that
+ 127:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    the user gets atleast __us microseconds of delay.
+ 128:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+ 129:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    Alternatively, user can define __DELAY_ROUND_DOWN__ and __DELAY_ROUND_CLOSEST__
+ 130:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    to round down and round to closest integer.
+ 131:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+ 132:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    Note: The new implementation of _delay_ms(double __ms) with 
+ 133:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****     __builtin_avr_delay_cycles(unsigned long) support is not backward compatible. 
+ 134:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    User can define __DELAY_BACKWARD_COMPATIBLE__ to get a backward compatible delay.
+ 135:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    Also, the backward compatible
+ 136:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    algorithm will be chosen if the code is compiled in a <em>freestanding
+ 137:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    environment</em> (GCC option \c -ffreestanding), as the math functions
+ 138:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****    required for rounding are not available to the compiler then.
+ 139:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+ 140:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****  */
+ 141:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** void
+ 142:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** _delay_ms(double __ms)
+ 143:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** {
+ 144:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 	double __tmp ; 
+ 145:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+ 146:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 147:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h ****   __STDC_HOSTED__
+ 148:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 	uint32_t __ticks_dc;
+ 149:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 	extern void __builtin_avr_delay_cycles(unsigned long);
+ 150:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 	__tmp = ((F_CPU) / 1e3) * __ms;
+ 151:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+ 152:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 	#if defined(__DELAY_ROUND_DOWN__)
+ 153:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 		__ticks_dc = (uint32_t)fabs(__tmp);
+ 154:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+ 155:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 	#elif defined(__DELAY_ROUND_CLOSEST__)
+ 156:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 		__ticks_dc = (uint32_t)(fabs(__tmp)+0.5);
+ 157:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+ 158:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 	#else
+ 159:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 		//round up by default
+ 160:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 		__ticks_dc = (uint32_t)(ceil(fabs(__tmp)));
+ 161:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 	#endif
+ 162:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 
+ 163:/usr/local/CrossPack-AVR-20131216/avr/include/util/delay.h **** 	__builtin_avr_delay_cycles(__ticks_dc);
+ 132               		.loc 2 163 0
+ 133 0034 2FE9      		ldi r18,lo8(99999)
+ 134 0036 86E8      		ldi r24,hi8(99999)
+ 135 0038 91E0      		ldi r25,hlo8(99999)
+ 136 003a 2150      		1: subi r18,1
+ 137 003c 8040      		sbci r24,0
+ 138 003e 9040      		sbci r25,0
+ 139 0040 01F4      		brne 1b
+ 140 0042 00C0      		rjmp .
+ 141 0044 0000      		nop
+ 142 0046 0895      		ret
+ 143               	.LBE18:
+ 144               	.LBE17:
+ 145               		.cfi_endproc
+ 146               	.LFE12:
+ 148               	.global	getBoostSupplyVoltage
+ 150               	getBoostSupplyVoltage:
+ 151               	.LFB14:
+ 189:main.c        **** 	_delay_ms(500);
+ 190:main.c        **** }
+ 191:main.c        **** 
+ 192:main.c        **** void process_boostSupplyVoltageMonitor() {
+ 193:main.c        **** 	static uint16_t callsSinceLastCheck = 0; //Remember static variables only get initialized once
+ 194:main.c        **** 	static uint8_t currentDutyCycle = BOOST_DEFAULT_DUTY;
+ 195:main.c        **** 
+ 196:main.c        **** 	callsSinceLastCheck++;
+ 197:main.c        **** 	if(callsSinceLastCheck > 25000) {
+ 198:main.c        **** 		uint16_t boostVoltage = getBoostSupplyVoltage();
+ 199:main.c        **** 		
+ 200:main.c        **** 		if(boostVoltage > BOOST_TARGET + BOOST_LIMIT) {
+ 201:main.c        **** 			currentDutyCycle--;
+ 202:main.c        **** 		} else if(boostVoltage < BOOST_TARGET - BOOST_LIMIT) {
+ 203:main.c        **** 			currentDutyCycle++;
+ 204:main.c        **** 		}
+ 205:main.c        **** 
+ 206:main.c        **** 		setBoostSupplyDutyCycle(currentDutyCycle);
+ 207:main.c        **** 		callsSinceLastCheck = 0;
+ 208:main.c        **** 	}
+ 209:main.c        **** }
+ 210:main.c        **** 
+ 211:main.c        **** uint16_t getBoostSupplyVoltage() {
+ 152               		.loc 1 211 0
+ 153               		.cfi_startproc
+ 154               	/* prologue: function */
+ 155               	/* frame size = 0 */
+ 156               	/* stack size = 0 */
+ 157               	.L__stack_usage = 0
+ 212:main.c        **** 	//Select channel 0 to read from
+ 213:main.c        **** 	ADMUX = (ADMUX & 0xF0);
+ 158               		.loc 1 213 0
+ 159 0048 8091 7C00 		lds r24,124
+ 160 004c 807F      		andi r24,lo8(-16)
+ 161 004e 8093 7C00 		sts 124,r24
+ 214:main.c        **** 
+ 215:main.c        **** 	//Start the conversion
+ 216:main.c        **** 	ADCSRA |= _BV(ADSC);
+ 162               		.loc 1 216 0
+ 163 0052 8091 7A00 		lds r24,122
+ 164 0056 8064      		ori r24,lo8(64)
+ 165 0058 8093 7A00 		sts 122,r24
+ 166               	.L9:
+ 217:main.c        **** 
+ 218:main.c        **** 	//Wait for the conversion to finish
+ 219:main.c        **** 	while(!bit_is_set(ADCSRA, ADIF)) { }
+ 167               		.loc 1 219 0 discriminator 1
+ 168 005c 8091 7A00 		lds r24,122
+ 169 0060 84FF      		sbrs r24,4
+ 170 0062 00C0      		rjmp .L9
+ 220:main.c        **** 
+ 221:main.c        **** 	//Clear ADIF
+ 222:main.c        **** 	ADCSRA |= _BV(ADIF);
+ 171               		.loc 1 222 0
+ 172 0064 8091 7A00 		lds r24,122
+ 173 0068 8061      		ori r24,lo8(16)
+ 174 006a 8093 7A00 		sts 122,r24
+ 223:main.c        **** 
+ 224:main.c        **** 	//ADC holds our value
+ 225:main.c        **** 	return ADC;
+ 175               		.loc 1 225 0
+ 176 006e 8091 7800 		lds r24,120
+ 177 0072 9091 7900 		lds r25,120+1
+ 226:main.c        **** }
+ 178               		.loc 1 226 0
+ 179 0076 0895      		ret
+ 180               		.cfi_endproc
+ 181               	.LFE14:
+ 183               	.global	process_boostSupplyVoltageMonitor
+ 185               	process_boostSupplyVoltageMonitor:
+ 186               	.LFB13:
+ 192:main.c        **** void process_boostSupplyVoltageMonitor() {
+ 187               		.loc 1 192 0
+ 188               		.cfi_startproc
+ 189               	/* prologue: function */
+ 190               	/* frame size = 0 */
+ 191               	/* stack size = 0 */
+ 192               	.L__stack_usage = 0
+ 196:main.c        **** 	callsSinceLastCheck++;
+ 193               		.loc 1 196 0
+ 194 0078 8091 0000 		lds r24,callsSinceLastCheck.1628
+ 195 007c 9091 0000 		lds r25,callsSinceLastCheck.1628+1
+ 196 0080 0196      		adiw r24,1
+ 197 0082 9093 0000 		sts callsSinceLastCheck.1628+1,r25
+ 198 0086 8093 0000 		sts callsSinceLastCheck.1628,r24
+ 197:main.c        **** 	if(callsSinceLastCheck > 25000) {
+ 199               		.loc 1 197 0
+ 200 008a 893A      		cpi r24,-87
+ 201 008c 9146      		sbci r25,97
+ 202 008e 00F0      		brlo .L11
+ 203               	.LBB19:
+ 198:main.c        **** 		uint16_t boostVoltage = getBoostSupplyVoltage();
+ 204               		.loc 1 198 0
+ 205 0090 0E94 0000 		call getBoostSupplyVoltage
+ 206               	.LVL3:
+ 207 0094 2091 0000 		lds r18,currentDutyCycle.1629
+ 200:main.c        **** 		if(boostVoltage > BOOST_TARGET + BOOST_LIMIT) {
+ 208               		.loc 1 200 0
+ 209 0098 823B      		cpi r24,-78
+ 210 009a 33E0      		ldi r19,3
+ 211 009c 9307      		cpc r25,r19
+ 212 009e 00F0      		brlo .L13
+ 201:main.c        **** 			currentDutyCycle--;
+ 213               		.loc 1 201 0
+ 214 00a0 2150      		subi r18,lo8(-(-1))
+ 215 00a2 00C0      		rjmp .L15
+ 216               	.L13:
+ 202:main.c        **** 		} else if(boostVoltage < BOOST_TARGET - BOOST_LIMIT) {
+ 217               		.loc 1 202 0
+ 218 00a4 8D39      		cpi r24,-99
+ 219 00a6 9340      		sbci r25,3
+ 220 00a8 00F4      		brsh .L14
+ 203:main.c        **** 			currentDutyCycle++;
+ 221               		.loc 1 203 0
+ 222 00aa 2F5F      		subi r18,lo8(-(1))
+ 223               	.L15:
+ 224 00ac 2093 0000 		sts currentDutyCycle.1629,r18
+ 225               	.L14:
+ 206:main.c        **** 		setBoostSupplyDutyCycle(currentDutyCycle);
+ 226               		.loc 1 206 0
+ 227 00b0 8091 0000 		lds r24,currentDutyCycle.1629
+ 228               	.LVL4:
+ 229               	.LBB20:
+ 230               	.LBB21:
+ 146:main.c        **** 	OCR0A = dutyCycle;
+ 231               		.loc 1 146 0
+ 232 00b4 87BD      		out 0x27,r24
+ 233               	.LBE21:
+ 234               	.LBE20:
+ 207:main.c        **** 		callsSinceLastCheck = 0;
+ 235               		.loc 1 207 0
+ 236 00b6 1092 0000 		sts callsSinceLastCheck.1628+1,__zero_reg__
+ 237 00ba 1092 0000 		sts callsSinceLastCheck.1628,__zero_reg__
+ 238               	.LVL5:
+ 239               	.L11:
+ 240 00be 0895      		ret
+ 241               	.LBE19:
+ 242               		.cfi_endproc
+ 243               	.LFE13:
+ 245               	.global	sendBitToTubeDrivers
+ 247               	sendBitToTubeDrivers:
+ 248               	.LFB15:
+ 227:main.c        **** 
+ 228:main.c        **** void sendBitToTubeDrivers(uint8_t bit) {
+ 249               		.loc 1 228 0
+ 250               		.cfi_startproc
+ 251               	.LVL6:
+ 252               	/* prologue: function */
+ 253               	/* frame size = 0 */
+ 254               	/* stack size = 0 */
+ 255               	.L__stack_usage = 0
+ 229:main.c        **** 	//Set DIN according to the bit
+ 230:main.c        **** 	if(bit == 0) {
+ 256               		.loc 1 230 0
+ 257 00c0 8111      		cpse r24,__zero_reg__
+ 258 00c2 00C0      		rjmp .L17
+ 231:main.c        **** 		//Set DIN to 0
+ 232:main.c        **** 		PORTB &= ~_BV(PINB4);
+ 259               		.loc 1 232 0
+ 260 00c4 2C98      		cbi 0x5,4
+ 261 00c6 00C0      		rjmp .L18
+ 262               	.L17:
+ 233:main.c        **** 	} else {
+ 234:main.c        **** 		//Set DIN to 1
+ 235:main.c        **** 		PORTB |= _BV(PINB4);
+ 263               		.loc 1 235 0
+ 264 00c8 2C9A      		sbi 0x5,4
+ 265               	.L18:
+ 236:main.c        **** 	}
+ 237:main.c        **** 
+ 238:main.c        **** 	//Toggle the clock, 1 then 0
+ 239:main.c        **** 	PORTB |= _BV(PINB2);
+ 266               		.loc 1 239 0
+ 267 00ca 2A9A      		sbi 0x5,2
+ 240:main.c        **** 	PORTB &= ~_BV(PINB2);
+ 268               		.loc 1 240 0
+ 269 00cc 2A98      		cbi 0x5,2
+ 270 00ce 0895      		ret
+ 271               		.cfi_endproc
+ 272               	.LFE15:
+ 274               	.global	latchTubeDrivers
+ 276               	latchTubeDrivers:
+ 277               	.LFB16:
+ 241:main.c        **** }
+ 242:main.c        **** 
+ 243:main.c        **** void latchTubeDrivers() {
+ 278               		.loc 1 243 0
+ 279               		.cfi_startproc
+ 280               	/* prologue: function */
+ 281               	/* frame size = 0 */
+ 282               	/* stack size = 0 */
+ 283               	.L__stack_usage = 0
+ 244:main.c        **** 	//Toggle LATCH, 1 then 0
+ 245:main.c        **** 	PORTB |= _BV(PINB3);
+ 284               		.loc 1 245 0
+ 285 00d0 2B9A      		sbi 0x5,3
+ 246:main.c        **** 	PORTB &= ~_BV(PINB3);
+ 286               		.loc 1 246 0
+ 287 00d2 2B98      		cbi 0x5,3
+ 288 00d4 0895      		ret
+ 289               		.cfi_endproc
+ 290               	.LFE16:
+ 292               		.section	.text.startup,"ax",@progbits
+ 293               	.global	main
+ 295               	main:
+ 296               	.LFB6:
+  23:main.c        **** int main(void) {
+ 297               		.loc 1 23 0
+ 298               		.cfi_startproc
+ 299               	/* prologue: function */
+ 300               	/* frame size = 0 */
+ 301               	/* stack size = 0 */
+ 302               	.L__stack_usage = 0
+  24:main.c        **** 	setUpSystemClock();
+ 303               		.loc 1 24 0
+ 304 0000 0E94 0000 		call setUpSystemClock
+ 305               	.LVL7:
+  26:main.c        **** 	setUpBoostSupplyPWM();
+ 306               		.loc 1 26 0
+ 307 0004 0E94 0000 		call setUpBoostSupplyPWM
+ 308               	.LVL8:
+ 309               	.LBB22:
+ 310               	.LBB23:
+ 151:main.c        **** 	ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
+ 311               		.loc 1 151 0
+ 312 0008 87E8      		ldi r24,lo8(-121)
+ 313 000a 8093 7A00 		sts 122,r24
+ 314               	.LBE23:
+ 315               	.LBE22:
+  28:main.c        **** 	setUpTubeDriverInterface();
+ 316               		.loc 1 28 0
+ 317 000e 0E94 0000 		call setUpTubeDriverInterface
+ 318               	.LVL9:
+ 319               	.LBB24:
+ 320               	.LBB25:
+ 321               	.LBB26:
+ 322               		.loc 2 163 0
+ 323 0012 2FE9      		ldi r18,lo8(99999)
+ 324 0014 86E8      		ldi r24,hi8(99999)
+ 325 0016 91E0      		ldi r25,hlo8(99999)
+ 326 0018 2150      		1: subi r18,1
+ 327 001a 8040      		sbci r24,0
+ 328 001c 9040      		sbci r25,0
+ 329 001e 01F4      		brne 1b
+ 330 0020 00C0      		rjmp .
+ 331 0022 0000      		nop
+ 332               	.LBE26:
+ 333               	.LBE25:
+ 334               	.LBE24:
+  74:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 3 GRID
+ 335               		.loc 1 74 0
+ 336 0024 81E0      		ldi r24,lo8(1)
+ 337 0026 0E94 0000 		call sendBitToTubeDrivers
+ 338               	.LVL10:
+  75:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 3 H
+ 339               		.loc 1 75 0
+ 340 002a 81E0      		ldi r24,lo8(1)
+ 341 002c 0E94 0000 		call sendBitToTubeDrivers
+ 342               	.LVL11:
+  76:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 3 G
+ 343               		.loc 1 76 0
+ 344 0030 80E0      		ldi r24,0
+ 345 0032 0E94 0000 		call sendBitToTubeDrivers
+ 346               	.LVL12:
+  77:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 3 F
+ 347               		.loc 1 77 0
+ 348 0036 81E0      		ldi r24,lo8(1)
+ 349 0038 0E94 0000 		call sendBitToTubeDrivers
+ 350               	.LVL13:
+  78:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 3 E
+ 351               		.loc 1 78 0
+ 352 003c 80E0      		ldi r24,0
+ 353 003e 0E94 0000 		call sendBitToTubeDrivers
+ 354               	.LVL14:
+  79:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 3 D
+ 355               		.loc 1 79 0
+ 356 0042 81E0      		ldi r24,lo8(1)
+ 357 0044 0E94 0000 		call sendBitToTubeDrivers
+ 358               	.LVL15:
+  80:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 3 C
+ 359               		.loc 1 80 0
+ 360 0048 81E0      		ldi r24,lo8(1)
+ 361 004a 0E94 0000 		call sendBitToTubeDrivers
+ 362               	.LVL16:
+  81:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 3 B
+ 363               		.loc 1 81 0
+ 364 004e 80E0      		ldi r24,0
+ 365 0050 0E94 0000 		call sendBitToTubeDrivers
+ 366               	.LVL17:
+  82:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 3 A
+ 367               		.loc 1 82 0
+ 368 0054 80E0      		ldi r24,0
+ 369 0056 0E94 0000 		call sendBitToTubeDrivers
+ 370               	.LVL18:
+  83:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 2 GRID
+ 371               		.loc 1 83 0
+ 372 005a 81E0      		ldi r24,lo8(1)
+ 373 005c 0E94 0000 		call sendBitToTubeDrivers
+ 374               	.LVL19:
+  84:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 2 H
+ 375               		.loc 1 84 0
+ 376 0060 80E0      		ldi r24,0
+ 377 0062 0E94 0000 		call sendBitToTubeDrivers
+ 378               	.LVL20:
+  85:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 2 G
+ 379               		.loc 1 85 0
+ 380 0066 80E0      		ldi r24,0
+ 381 0068 0E94 0000 		call sendBitToTubeDrivers
+ 382               	.LVL21:
+  86:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 2 F
+ 383               		.loc 1 86 0
+ 384 006c 81E0      		ldi r24,lo8(1)
+ 385 006e 0E94 0000 		call sendBitToTubeDrivers
+ 386               	.LVL22:
+  87:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 2 E
+ 387               		.loc 1 87 0
+ 388 0072 81E0      		ldi r24,lo8(1)
+ 389 0074 0E94 0000 		call sendBitToTubeDrivers
+ 390               	.LVL23:
+  88:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 2 D
+ 391               		.loc 1 88 0
+ 392 0078 81E0      		ldi r24,lo8(1)
+ 393 007a 0E94 0000 		call sendBitToTubeDrivers
+ 394               	.LVL24:
+  89:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 2 C
+ 395               		.loc 1 89 0
+ 396 007e 80E0      		ldi r24,0
+ 397 0080 0E94 0000 		call sendBitToTubeDrivers
+ 398               	.LVL25:
+  90:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 2 B
+ 399               		.loc 1 90 0
+ 400 0084 81E0      		ldi r24,lo8(1)
+ 401 0086 0E94 0000 		call sendBitToTubeDrivers
+ 402               	.LVL26:
+  91:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 2 A
+ 403               		.loc 1 91 0
+ 404 008a 81E0      		ldi r24,lo8(1)
+ 405 008c 0E94 0000 		call sendBitToTubeDrivers
+ 406               	.LVL27:
+  92:main.c        **** 	sendBitToTubeDrivers(0);	//NC
+ 407               		.loc 1 92 0
+ 408 0090 80E0      		ldi r24,0
+ 409 0092 0E94 0000 		call sendBitToTubeDrivers
+ 410               	.LVL28:
+  93:main.c        **** 	sendBitToTubeDrivers(0);	//NC
+ 411               		.loc 1 93 0
+ 412 0096 80E0      		ldi r24,0
+ 413 0098 0E94 0000 		call sendBitToTubeDrivers
+ 414               	.LVL29:
+  94:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 1 GRID
+ 415               		.loc 1 94 0
+ 416 009c 81E0      		ldi r24,lo8(1)
+ 417 009e 0E94 0000 		call sendBitToTubeDrivers
+ 418               	.LVL30:
+  95:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 1 H
+ 419               		.loc 1 95 0
+ 420 00a2 80E0      		ldi r24,0
+ 421 00a4 0E94 0000 		call sendBitToTubeDrivers
+ 422               	.LVL31:
+  96:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 1 G
+ 423               		.loc 1 96 0
+ 424 00a8 80E0      		ldi r24,0
+ 425 00aa 0E94 0000 		call sendBitToTubeDrivers
+ 426               	.LVL32:
+  97:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 1 F
+ 427               		.loc 1 97 0
+ 428 00ae 81E0      		ldi r24,lo8(1)
+ 429 00b0 0E94 0000 		call sendBitToTubeDrivers
+ 430               	.LVL33:
+  98:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 1 E
+ 431               		.loc 1 98 0
+ 432 00b4 81E0      		ldi r24,lo8(1)
+ 433 00b6 0E94 0000 		call sendBitToTubeDrivers
+ 434               	.LVL34:
+  99:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 1 D
+ 435               		.loc 1 99 0
+ 436 00ba 81E0      		ldi r24,lo8(1)
+ 437 00bc 0E94 0000 		call sendBitToTubeDrivers
+ 438               	.LVL35:
+ 100:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 1 C
+ 439               		.loc 1 100 0
+ 440 00c0 80E0      		ldi r24,0
+ 441 00c2 0E94 0000 		call sendBitToTubeDrivers
+ 442               	.LVL36:
+ 101:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 1 B
+ 443               		.loc 1 101 0
+ 444 00c6 81E0      		ldi r24,lo8(1)
+ 445 00c8 0E94 0000 		call sendBitToTubeDrivers
+ 446               	.LVL37:
+ 102:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 1 A
+ 447               		.loc 1 102 0
+ 448 00cc 81E0      		ldi r24,lo8(1)
+ 449 00ce 0E94 0000 		call sendBitToTubeDrivers
+ 450               	.LVL38:
+ 103:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 0 GRID
+ 451               		.loc 1 103 0
+ 452 00d2 81E0      		ldi r24,lo8(1)
+ 453 00d4 0E94 0000 		call sendBitToTubeDrivers
+ 454               	.LVL39:
+ 104:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 0 H
+ 455               		.loc 1 104 0
+ 456 00d8 81E0      		ldi r24,lo8(1)
+ 457 00da 0E94 0000 		call sendBitToTubeDrivers
+ 458               	.LVL40:
+ 105:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 0 G
+ 459               		.loc 1 105 0
+ 460 00de 80E0      		ldi r24,0
+ 461 00e0 0E94 0000 		call sendBitToTubeDrivers
+ 462               	.LVL41:
+ 106:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 0 F
+ 463               		.loc 1 106 0
+ 464 00e4 81E0      		ldi r24,lo8(1)
+ 465 00e6 0E94 0000 		call sendBitToTubeDrivers
+ 466               	.LVL42:
+ 107:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 0 E
+ 467               		.loc 1 107 0
+ 468 00ea 80E0      		ldi r24,0
+ 469 00ec 0E94 0000 		call sendBitToTubeDrivers
+ 470               	.LVL43:
+ 108:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 0 D
+ 471               		.loc 1 108 0
+ 472 00f0 81E0      		ldi r24,lo8(1)
+ 473 00f2 0E94 0000 		call sendBitToTubeDrivers
+ 474               	.LVL44:
+ 109:main.c        **** 	sendBitToTubeDrivers(1);	//Tube 0 C
+ 475               		.loc 1 109 0
+ 476 00f6 81E0      		ldi r24,lo8(1)
+ 477 00f8 0E94 0000 		call sendBitToTubeDrivers
+ 478               	.LVL45:
+ 110:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 0 B
+ 479               		.loc 1 110 0
+ 480 00fc 80E0      		ldi r24,0
+ 481 00fe 0E94 0000 		call sendBitToTubeDrivers
+ 482               	.LVL46:
+ 111:main.c        **** 	sendBitToTubeDrivers(0);	//Tube 0 A
+ 483               		.loc 1 111 0
+ 484 0102 80E0      		ldi r24,0
+ 485 0104 0E94 0000 		call sendBitToTubeDrivers
+ 486               	.LVL47:
+ 112:main.c        **** 	sendBitToTubeDrivers(0);	//NC, need it to push everything up
+ 487               		.loc 1 112 0
+ 488 0108 80E0      		ldi r24,0
+ 489 010a 0E94 0000 		call sendBitToTubeDrivers
+ 490               	.LVL48:
+ 113:main.c        **** 	latchTubeDrivers();
+ 491               		.loc 1 113 0
+ 492 010e 0E94 0000 		call latchTubeDrivers
+ 493               	.LVL49:
+ 494               	.L21:
+ 495 0112 00C0      		rjmp .L21
+ 496               		.cfi_endproc
+ 497               	.LFE6:
+ 499               		.data
+ 502               	currentDutyCycle.1629:
+ 503 0000 82        		.byte	-126
+ 504               		.local	callsSinceLastCheck.1628
+ 505               		.comm	callsSinceLastCheck.1628,2,1
+ 506               		.text
+ 507               	.Letext0:
+ 508               		.file 3 "/usr/local/CrossPack-AVR-20131216/avr/include/stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 main.c
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:2      *ABS*:0000003e __SP_H__
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:3      *ABS*:0000003d __SP_L__
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:4      *ABS*:0000003f __SREG__
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:5      *ABS*:00000000 __tmp_reg__
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:6      *ABS*:00000001 __zero_reg__
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:12     .text:00000000 setUpSystemClock
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:34     .text:0000000c setUpBoostSupplyPWM
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:67     .text:00000020 setBoostSupplyDutyCycle
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:84     .text:00000024 setUpBoostSupplyVoltageMonitor
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:101    .text:0000002c setUpTubeDriverInterface
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:120    .text:00000034 waitForTubeWarmup
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:150    .text:00000048 getBoostSupplyVoltage
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:185    .text:00000078 process_boostSupplyVoltageMonitor
+                             .bss:00000000 callsSinceLastCheck.1628
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:502    .data:00000000 currentDutyCycle.1629
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:247    .text:000000c0 sendBitToTubeDrivers
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:276    .text:000000d0 latchTubeDrivers
+/var/folders/vk/nj5hq9913nq45hb9f17zh7nr0000gn/T//ccZU2o7g.s:295    .text.startup:00000000 main
+
+UNDEFINED SYMBOLS
+__do_copy_data
+__do_clear_bss

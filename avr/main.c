@@ -1,7 +1,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define BOOST_DEFAULT_DUTY 130 //About 50.9%
+#define BOOST_DEFAULT_DUTY 180 //About 70.6%
 #define BOOST_TARGET 935 //Should be regulating it to about 56 volts
 #define BOOST_LIMIT 10
 
@@ -29,7 +29,7 @@ int main(void) {
 
 	waitForTubeWarmup();
 
-	//Driver is connected to the tube like so:
+	//Drivers are connected to the tubes like so:
 	//OUT0	NC
 	//OUT1	Tube 0 A
 	//OUT2	Tube 0 B
@@ -50,7 +50,47 @@ int main(void) {
 	//OUT17	Tube 1 H
 	//OUT18	Tube 1 GRID
 	//OUT19	NC
+	//OUT0	NC
+	//OUT1	Tube 2 A
+	//OUT2	Tube 2 B
+	//OUT3	Tube 2 C
+	//OUT4	Tube 2 D
+	//OUT5	Tube 2 E
+	//OUT6	Tube 2 F
+	//OUT7	Tube 2 G
+	//OUT8	Tube 2 H
+	//OUT9	Tube 2 GRID
+	//OUT10	Tube 3 A
+	//OUT11	Tube 3 B
+	//OUT12	Tube 3 C
+	//OUT13	Tube 3 D
+	//OUT14	Tube 3 E
+	//OUT15	Tube 3 F
+	//OUT16	Tube 3 G
+	//OUT17	Tube 3 H
+	//OUT18	Tube 3 GRID
+	//OUT19	NC
 
+	sendBitToTubeDrivers(1);	//Tube 3 GRID
+	sendBitToTubeDrivers(1);	//Tube 3 H
+	sendBitToTubeDrivers(0);	//Tube 3 G
+	sendBitToTubeDrivers(1);	//Tube 3 F
+	sendBitToTubeDrivers(0);	//Tube 3 E
+	sendBitToTubeDrivers(1);	//Tube 3 D
+	sendBitToTubeDrivers(1);	//Tube 3 C
+	sendBitToTubeDrivers(0);	//Tube 3 B
+	sendBitToTubeDrivers(0);	//Tube 3 A
+	sendBitToTubeDrivers(1);	//Tube 2 GRID
+	sendBitToTubeDrivers(0);	//Tube 2 H
+	sendBitToTubeDrivers(0);	//Tube 2 G
+	sendBitToTubeDrivers(1);	//Tube 2 F
+	sendBitToTubeDrivers(1);	//Tube 2 E
+	sendBitToTubeDrivers(1);	//Tube 2 D
+	sendBitToTubeDrivers(0);	//Tube 2 C
+	sendBitToTubeDrivers(1);	//Tube 2 B
+	sendBitToTubeDrivers(1);	//Tube 2 A
+	sendBitToTubeDrivers(0);	//NC
+	sendBitToTubeDrivers(0);	//NC
 	sendBitToTubeDrivers(1);	//Tube 1 GRID
 	sendBitToTubeDrivers(0);	//Tube 1 H
 	sendBitToTubeDrivers(0);	//Tube 1 G
