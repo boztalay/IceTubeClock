@@ -7,6 +7,7 @@
 
 void setUpSystemClock(void);
 
+void setUpFilamentSupplyPWM(void);
 void setUpBoostSupplyPWM(void);
 void setBoostSupplyDutyCycle(uint8_t);
 void setUpBoostSupplyVoltageMonitor(void);
@@ -23,6 +24,7 @@ void latchTubeDrivers(void);
 int main(void) {
 	setUpSystemClock();
 
+	setUpFilamentSupplyPWM();
 	setUpBoostSupplyPWM();
 	setUpBoostSupplyVoltageMonitor();
 	setUpTubeDriverInterface();
@@ -125,10 +127,22 @@ void setUpSystemClock() {
 	CLKPR = 0x00;
 }
 
+void setUpFilamentSupplyPWM() {
+	//Set up PORTD.6 as our PWM output, which is for OC2B
+	PORTD = 0x00;
+	DDRD |= _BV(DDD3);
+
+	//Set up Timer2 OC2B for Phase-Correct Non-Inverted PWM
+	TCCR2A = _BV(COM2B1) | _BV(WGM20);
+
+	//Set the prescaler to 6 (1/256) so we get about 60 Hz
+	TCCR2B = _BV(CS22) | _BV(CS21);
+}
+
 void setUpBoostSupplyPWM() {
 	//Set up PORTD.6 as our PWM output, which is for OC0A
 	PORTD = 0x00;
-	DDRD = _BV(DDD6);
+	DDRD |= _BV(DDD6);
 
 	//Set up Timer0 OC0A for Phase-Correct Non-Inverted PWM
 	TCCR0A = _BV(COM0A1) | _BV(WGM00);
@@ -157,28 +171,6 @@ void setUpTubeDriverInterface() {
 	//PORTB.3	LOAD
 	//PORTB.2	CLK
 	//PORTB.1	BLANK
-	
-	//Driver is connected to the tube like so:
-	//OUT0	NC
-	//OUT1	Tube 0 A
-	//OUT2	Tube 0 B
-	//OUT3	Tube 0 C
-	//OUT4	Tube 0 D
-	//OUT5	Tube 0 E
-	//OUT6	Tube 0 F
-	//OUT7	Tube 0 G
-	//OUT8	Tube 0 H
-	//OUT9	Tube 0 GRID
-	//OUT10	Tube 1 A
-	//OUT11	Tube 1 B
-	//OUT12	Tube 1 C
-	//OUT13	Tube 1 D
-	//OUT14	Tube 1 E
-	//OUT15	Tube 1 F
-	//OUT16	Tube 1 G
-	//OUT17	Tube 1 H
-	//OUT18	Tube 1 GRID
-	//OUT19	NC
 	
 	//Set up all of the interface pins as output, outputs to 0
 	PORTB = 0x00;
