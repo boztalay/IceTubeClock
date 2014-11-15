@@ -367,8 +367,14 @@ UsedLibrary="/Applications/EAGLE-7.1.0/lbr/zilog.lbr"
 UsedLibrary="/Users/boztalay/Desktop/Folders/Personal Projects/EagleLibrary/boztalay.lbr"
 
 [Win_1]
+Type="Control Panel"
+Loc="-665 -839 -66 -440"
+State=2
+Number=0
+
+[Win_2]
 Type="Schematic Editor"
-Loc="-343 -822 1889 406"
+Loc="-1305 -1229 927 -1"
 State=1
 Number=1
 File="iv-11_boost_supply.sch"
@@ -413,12 +419,6 @@ PadsSameType=0
 Layer=91
 Views=" 1: -16.256 -14.986 168.656 103.886"
 Sheet="1"
-
-[Win_2]
-Type="Control Panel"
-Loc="-665 -839 -66 -440"
-State=2
-Number=0
 
 [Desktop]
 Screen="1440 900"
