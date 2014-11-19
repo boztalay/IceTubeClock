@@ -6,3 +6,5 @@ http://www.digikey.com/product-detail/en/C1206C103JARACTU/399-7174-1-ND/3439312
 http://www.digikey.com/product-detail/en/ERJ-8GEYJ101V/P100ECT-ND/203247
 http://www.digikey.com/product-detail/en/TS53YL103MR10/TS53YL-10KCT-ND/1587993
 http://www.digikey.com/product-detail/en/LM555CM/LM555CMFS-ND/1051271
+http://www.digikey.com/product-detail/en/M50-2000005/952-1731-ND/2890859
+http://www.digikey.com/product-detail/en/ERJ-8GEYJ114V/P110KECT-ND/203256
