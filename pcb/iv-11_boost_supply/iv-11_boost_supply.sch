@@ -4309,7 +4309,6 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <part name="JP1" library="SparkFun-Connectors" deviceset="M05" device="LOCK"/>
 <part name="F1" library="boztalay" deviceset="1AG-1/4X5/8-FUSE" device="" value="2A/32V"/>
 <part name="SUPPLY1" library="SparkFun-Aesthetics" deviceset="VCC" device=""/>
-<part name="GND1" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND2" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND3" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="JP2" library="SparkFun-Connectors" deviceset="M03" device="LOCK"/>
@@ -4321,6 +4320,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <part name="R6" library="SparkFun-Passives" deviceset="RESISTOR" device="1206" value="110k"/>
 <part name="GND7" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="D2" library="adafruit" deviceset="SCHOTTKY-DIODE" device="DO35-7" value="MBR160"/>
+<part name="GND1" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -4351,7 +4351,6 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <instance part="JP1" gate="G$1" x="60.96" y="22.86"/>
 <instance part="F1" gate="G$1" x="38.1" y="12.7" rot="R90"/>
 <instance part="SUPPLY1" gate="G$1" x="73.66" y="17.78" rot="R180"/>
-<instance part="GND1" gate="1" x="78.74" y="15.24"/>
 <instance part="GND2" gate="1" x="30.48" y="48.26"/>
 <instance part="GND3" gate="1" x="-7.62" y="20.32"/>
 <instance part="JP2" gate="G$1" x="60.96" y="0"/>
@@ -4363,6 +4362,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <instance part="R6" gate="G$1" x="114.3" y="27.94"/>
 <instance part="GND7" gate="1" x="137.16" y="22.86"/>
 <instance part="D2" gate="G$1" x="121.92" y="71.12"/>
+<instance part="GND1" gate="1" x="88.9" y="17.78"/>
 </instances>
 <busses>
 </busses>
@@ -4380,12 +4380,6 @@ You are welcome to use this library for commercial purposes. For attribution, we
 </segment>
 </net>
 <net name="GND" class="0">
-<segment>
-<pinref part="JP1" gate="G$1" pin="2"/>
-<pinref part="GND1" gate="1" pin="GND"/>
-<wire x1="68.58" y1="20.32" x2="78.74" y2="20.32" width="0.1524" layer="91"/>
-<wire x1="78.74" y1="20.32" x2="78.74" y2="17.78" width="0.1524" layer="91"/>
-</segment>
 <segment>
 <pinref part="IC1" gate="A" pin="GND"/>
 <pinref part="GND2" gate="1" pin="GND"/>
@@ -4427,6 +4421,12 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <wire x1="134.62" y1="27.94" x2="137.16" y2="27.94" width="0.1524" layer="91"/>
 <pinref part="GND7" gate="1" pin="GND"/>
 <wire x1="137.16" y1="27.94" x2="137.16" y2="25.4" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="JP1" gate="G$1" pin="3"/>
+<wire x1="68.58" y1="22.86" x2="88.9" y2="22.86" width="0.1524" layer="91"/>
+<wire x1="88.9" y1="22.86" x2="88.9" y2="20.32" width="0.1524" layer="91"/>
+<pinref part="GND1" gate="1" pin="GND"/>
 </segment>
 </net>
 <net name="FBK" class="0">
@@ -4562,9 +4562,9 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <label x="74.168" y="-3.302" size="1.524" layer="95"/>
 </segment>
 <segment>
-<pinref part="JP1" gate="G$1" pin="3"/>
-<wire x1="68.58" y1="22.86" x2="73.66" y2="22.86" width="0.1524" layer="91"/>
-<label x="74.168" y="22.098" size="1.524" layer="95"/>
+<pinref part="JP1" gate="G$1" pin="2"/>
+<wire x1="68.58" y1="20.32" x2="73.66" y2="20.32" width="0.1524" layer="91"/>
+<label x="74.168" y="19.558" size="1.524" layer="95"/>
 </segment>
 </net>
 <net name="N$4" class="0">
