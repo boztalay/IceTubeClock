@@ -586,8 +586,8 @@ It has reduced top mask to make it harder to put the component on the wrong side
 <package name="CPOL-RADIAL-100UF-25V">
 <wire x1="-0.635" y1="1.27" x2="-1.905" y2="1.27" width="0.2032" layer="21"/>
 <circle x="0" y="0" radius="3.25" width="0.2032" layer="21"/>
-<pad name="2" x="-1.27" y="0" drill="0.7" diameter="1.651"/>
-<pad name="1" x="1.27" y="0" drill="0.7" diameter="1.651" shape="square"/>
+<pad name="2" x="-1.27" y="0" drill="0.9" diameter="1.651"/>
+<pad name="1" x="1.27" y="0" drill="0.9" diameter="1.651" shape="square"/>
 <text x="-1.905" y="-4.318" size="0.8128" layer="27">&gt;Value</text>
 <text x="-0.762" y="1.651" size="0.4064" layer="25">&gt;Name</text>
 </package>
@@ -2365,11 +2365,20 @@ INTERNATIONAL RECTIFIER, irg4bc15ud-s.pdf</description>
 <text x="-8.255" y="-5.08" size="1.27" layer="27">&gt;VALUE</text>
 </package>
 <package name="INDUCTOR-PTH-13MM">
-<circle x="0" y="0" radius="5.715" width="0.127" layer="21"/>
+<circle x="0" y="0" radius="5.715" width="0.1778" layer="21"/>
 <text x="5.08" y="-5.08" size="1.27" layer="27">&gt;VALUE</text>
 <text x="5.08" y="5.08" size="1.27" layer="25">&gt;NAME</text>
 <pad name="A" x="-3.175" y="0" drill="1.1" diameter="1.9304"/>
 <pad name="B" x="3.175" y="0" drill="1.1" diameter="1.9304" rot="R90"/>
+</package>
+<package name="POLAR-CAP-PTH-10MM">
+<circle x="0" y="0" radius="4.572" width="0.1778" layer="21"/>
+<pad name="B" x="2.54" y="0" drill="1.1" diameter="1.9304"/>
+<pad name="A" x="-2.54" y="0" drill="1.1" diameter="1.9304" shape="square"/>
+<text x="3.81" y="-3.81" size="1.27" layer="27" align="top-left">&gt;VALUE</text>
+<text x="3.81" y="3.81" size="1.27" layer="25">&gt;NAME</text>
+<wire x1="-2.54" y1="3.175" x2="-2.54" y2="1.905" width="0.1778" layer="21"/>
+<wire x1="-3.175" y1="2.54" x2="-1.905" y2="2.54" width="0.1778" layer="21"/>
 </package>
 </packages>
 <symbols>
@@ -2419,7 +2428,7 @@ INTERNATIONAL RECTIFIER, irg4bc15ud-s.pdf</description>
 <pin name="2" x="5.08" y="0" visible="off" length="short" direction="pas" swaplevel="1" rot="R180"/>
 <pin name="1" x="-5.08" y="0" visible="off" length="short" direction="pas" swaplevel="1"/>
 </symbol>
-<symbol name="INDUCTOR-PTH-13MM">
+<symbol name="INDUCTOR">
 <wire x1="-5.08" y1="0" x2="-2.54" y2="0" width="0.254" layer="94" curve="-180"/>
 <wire x1="-2.54" y1="0" x2="0" y2="0" width="0.254" layer="94" curve="-180"/>
 <wire x1="0" y1="0" x2="2.54" y2="0" width="0.254" layer="94" curve="-180"/>
@@ -2428,6 +2437,19 @@ INTERNATIONAL RECTIFIER, irg4bc15ud-s.pdf</description>
 <pin name="B" x="7.62" y="0" visible="off" length="short" rot="R180"/>
 <text x="-5.08" y="2.54" size="1.27" layer="95">&gt;NAME</text>
 <text x="-5.08" y="-2.54" size="1.27" layer="96">&gt;VALUE</text>
+</symbol>
+<symbol name="POLAR-CAP">
+<wire x1="-3.048" y1="1.27" x2="0" y2="1.27" width="0.254" layer="94"/>
+<wire x1="0" y1="1.27" x2="3.048" y2="1.27" width="0.254" layer="94"/>
+<pin name="A" x="0" y="5.08" visible="off" length="short" rot="R270"/>
+<pin name="B" x="0" y="-5.08" visible="off" length="short" rot="R90"/>
+<text x="2.54" y="2.54" size="1.778" layer="95">&gt;NAME</text>
+<text x="2.54" y="-2.54" size="1.778" layer="96" align="top-left">&gt;VALUE</text>
+<wire x1="0" y1="2.54" x2="0" y2="1.27" width="0.1524" layer="94"/>
+<wire x1="0" y1="-2.54" x2="0" y2="0" width="0.1524" layer="94"/>
+<wire x1="-2.54" y1="3.048" x2="-2.54" y2="2.032" width="0.254" layer="94"/>
+<wire x1="-3.048" y1="2.54" x2="-2.032" y2="2.54" width="0.254" layer="94"/>
+<wire x1="-3.048" y1="-1.27" x2="3.048" y2="-1.27" width="0.254" layer="94" curve="-87.397438"/>
 </symbol>
 </symbols>
 <devicesets>
@@ -2468,10 +2490,26 @@ INTERNATIONAL RECTIFIER, irg4bc15ud-s.pdf</description>
 </deviceset>
 <deviceset name="INDUCTOR">
 <gates>
-<gate name="G$1" symbol="INDUCTOR-PTH-13MM" x="0" y="0"/>
+<gate name="G$1" symbol="INDUCTOR" x="0" y="0"/>
 </gates>
 <devices>
 <device name="" package="INDUCTOR-PTH-13MM">
+<connects>
+<connect gate="G$1" pin="A" pad="A"/>
+<connect gate="G$1" pin="B" pad="B"/>
+</connects>
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="POLAR-CAP">
+<gates>
+<gate name="G$1" symbol="POLAR-CAP" x="0" y="0"/>
+</gates>
+<devices>
+<device name="" package="POLAR-CAP-PTH-10MM">
 <connects>
 <connect gate="G$1" pin="A" pad="A"/>
 <connect gate="G$1" pin="B" pad="B"/>
@@ -2503,10 +2541,9 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <wire x1="-1.778" y1="0" x2="-2.54" y2="0" width="0.2032" layer="21"/>
 <wire x1="1.778" y1="0.762" x2="1.778" y2="0" width="0.2032" layer="21"/>
 <wire x1="-1.27" y1="0.635" x2="-1.27" y2="-0.635" width="0.2032" layer="21"/>
-<pad name="P$1" x="-3.556" y="0" drill="0.9"/>
-<pad name="P$2" x="3.556" y="0" drill="0.9"/>
+<pad name="P$1" x="-3.556" y="0" drill="1" diameter="1.6764"/>
+<pad name="P$2" x="3.556" y="0" drill="1" diameter="1.6764"/>
 <text x="-2.54" y="1.27" size="0.4064" layer="25">&gt;Name</text>
-<text x="-1.397" y="-0.508" size="0.4064" layer="21">&gt;Value</text>
 </package>
 <package name="SMB-DIODE">
 <description>&lt;b&gt;Diode&lt;/b&gt;&lt;p&gt;
@@ -3757,7 +3794,6 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <part name="R3" library="SparkFun-Passives" deviceset="RESISTOR" device="1206" value="10k"/>
 <part name="C1" library="SparkFun-Passives" deviceset="CAP" device="1206" value="10nF"/>
 <part name="C2" library="SparkFun-Passives" deviceset="CAP_POL" device="PTH1" value="47uF"/>
-<part name="C3" library="SparkFun-Passives" deviceset="CAP_POL" device="PTH1" value="100uF"/>
 <part name="R5" library="SparkFun-Electromechanical" deviceset="TRIMPOT" device="" value="10k"/>
 <part name="D1" library="adafruit" deviceset="1N4004" device=""/>
 <part name="IC1" library="adafruit" deviceset="*555" device="D" technology="LM"/>
@@ -3776,9 +3812,10 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <part name="R4" library="SparkFun-Passives" deviceset="RESISTOR" device="1206" value="10k"/>
 <part name="R6" library="SparkFun-Passives" deviceset="RESISTOR" device="1206" value="110k"/>
 <part name="GND7" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
-<part name="D2" library="adafruit" deviceset="SCHOTTKY-DIODE" device="DO35-7" value="MBR160"/>
 <part name="GND1" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="L1" library="boztalay" deviceset="INDUCTOR" device="" value="2200uH"/>
+<part name="C3" library="boztalay" deviceset="POLAR-CAP" device="" value="100uF"/>
+<part name="D2" library="adafruit" deviceset="SCHOTTKY-DIODE" device="DO41" value="MBR160"/>
 </parts>
 <sheets>
 <sheet>
@@ -3790,7 +3827,6 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <instance part="R3" gate="G$1" x="96.52" y="53.34" rot="R90"/>
 <instance part="C1" gate="G$1" x="-7.62" y="27.94"/>
 <instance part="C2" gate="G$1" x="17.78" y="15.24"/>
-<instance part="C3" gate="G$1" x="137.16" y="63.5"/>
 <instance part="R5" gate="R?" x="-7.62" y="60.96" smashed="yes" rot="R270">
 <attribute name="NAME" x="-10.9474" y="57.912" size="1.778" layer="95" rot="R270"/>
 <attribute name="VALUE" x="-5.842" y="66.294" size="1.778" layer="96" rot="R270"/>
@@ -3818,9 +3854,10 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <instance part="R4" gate="G$1" x="129.54" y="27.94"/>
 <instance part="R6" gate="G$1" x="114.3" y="27.94"/>
 <instance part="GND7" gate="1" x="137.16" y="22.86"/>
-<instance part="D2" gate="G$1" x="121.92" y="71.12"/>
 <instance part="GND1" gate="1" x="88.9" y="17.78"/>
 <instance part="L1" gate="G$1" x="104.14" y="83.82" rot="R270"/>
+<instance part="C3" gate="G$1" x="137.16" y="63.5"/>
+<instance part="D2" gate="G$1" x="121.92" y="71.12"/>
 </instances>
 <busses>
 </busses>
@@ -3865,7 +3902,6 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <wire x1="17.78" y1="10.16" x2="17.78" y2="5.08" width="0.1524" layer="91"/>
 </segment>
 <segment>
-<pinref part="C3" gate="G$1" pin="-"/>
 <pinref part="GND6" gate="1" pin="GND"/>
 <wire x1="137.16" y1="58.42" x2="137.16" y2="53.34" width="0.1524" layer="91"/>
 <pinref part="D3" gate="G$1" pin="A"/>
@@ -3873,6 +3909,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <wire x1="152.4" y1="58.42" x2="152.4" y2="53.34" width="0.1524" layer="91"/>
 <wire x1="152.4" y1="53.34" x2="137.16" y2="53.34" width="0.1524" layer="91"/>
 <junction x="137.16" y="53.34"/>
+<pinref part="C3" gate="G$1" pin="B"/>
 </segment>
 <segment>
 <pinref part="R4" gate="G$1" pin="2"/>
@@ -3910,9 +3947,8 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <label x="74.168" y="27.178" size="1.524" layer="95"/>
 </segment>
 <segment>
-<pinref part="C3" gate="G$1" pin="+"/>
 <wire x1="124.46" y1="71.12" x2="137.16" y2="71.12" width="0.1524" layer="91"/>
-<wire x1="137.16" y1="71.12" x2="137.16" y2="66.04" width="0.1524" layer="91"/>
+<wire x1="137.16" y1="71.12" x2="137.16" y2="68.58" width="0.1524" layer="91"/>
 <pinref part="D3" gate="G$1" pin="C"/>
 <wire x1="137.16" y1="71.12" x2="152.4" y2="71.12" width="0.1524" layer="91"/>
 <wire x1="152.4" y1="71.12" x2="152.4" y2="63.5" width="0.1524" layer="91"/>
@@ -3920,6 +3956,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <wire x1="152.4" y1="71.12" x2="157.48" y2="71.12" width="0.1524" layer="91"/>
 <junction x="152.4" y="71.12"/>
 <label x="157.988" y="70.358" size="1.524" layer="95"/>
+<pinref part="C3" gate="G$1" pin="A"/>
 <pinref part="D2" gate="G$1" pin="C"/>
 </segment>
 <segment>
@@ -4032,8 +4069,8 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <wire x1="104.14" y1="71.12" x2="104.14" y2="68.58" width="0.1524" layer="91"/>
 <wire x1="104.14" y1="71.12" x2="119.38" y2="71.12" width="0.1524" layer="91"/>
 <junction x="104.14" y="71.12"/>
-<pinref part="D2" gate="G$1" pin="A"/>
 <pinref part="L1" gate="G$1" pin="B"/>
+<pinref part="D2" gate="G$1" pin="A"/>
 </segment>
 </net>
 <net name="VCC_PRC" class="0">
