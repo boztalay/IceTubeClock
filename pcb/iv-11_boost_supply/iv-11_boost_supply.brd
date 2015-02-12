@@ -152,7 +152,7 @@
 <text x="35.687" y="42.545" size="1.27" layer="21" font="vector" ratio="11" align="center">HIGH
 VOLTAGE</text>
 <text x="24.13" y="2.032" size="1.27" layer="21" font="vector" ratio="11" align="center">HIGH VOLTAGE</text>
-<text x="44.45" y="10.16" size="1.27" layer="21" font="vector" ratio="11" rot="R45" align="center">BOOST SUPPLY V1</text>
+<text x="44.45" y="10.16" size="1.27" layer="21" font="vector" ratio="11" rot="R45" align="center">BOOST SUPPLY V1A</text>
 </plain>
 <libraries>
 <library name="SparkFun-Passives">

@@ -368,10 +368,10 @@ UsedLibrary="/Users/boztalay/Desktop/Folders/Personal Projects/EagleLibrary/bozt
 
 [Win_1]
 Type="Control Panel"
-Loc="64 421 663 820"
+Loc="130 172 729 571"
 State=2
 Number=0
 
 [Desktop]
-Screen="1440 900"
+Screen="1665 900"
 Window="Win_1"
