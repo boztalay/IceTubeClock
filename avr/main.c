@@ -4,6 +4,7 @@
 
 #include <avr/io.h>
 #include <util/delay.h>
+#include <avr/interrupt.h>
 
 // Drivers are connected to the tubes like so:
 // OUT0	NC
@@ -60,7 +61,7 @@ uint8_t numberPatterns[10][8] = {
     {1, 1, 1, 1, 1, 0, 0, 1}, // 6
     {0, 0, 0, 0, 1, 1, 0, 1}, // 7
     {1, 1, 1, 1, 1, 1, 0, 1}, // 8
-    {0, 0, 1, 1, 1, 1, 0, 1}, // 9
+    {1, 0, 1, 1, 1, 1, 0, 1}, // 9
 };
 
 // Globals for what each tube is displaying
@@ -76,6 +77,9 @@ void setUpSystemClock(void);
 
 void setUpTubeDriverInterface(void);
 void waitForTubeWarmup(void);
+
+void setUpRealTimeClock(void);
+void updateTime(void);
 
 void updateTubes(void);
 void sendBitsToTubeDriversToDisplayNumber(int8_t);
@@ -95,22 +99,10 @@ int main(void) {
     tube2Number = 0;
     tube3Number = 0;
 
+    setUpRealTimeClock();
+
 	while(1) {
-        _delay_ms(500);
 
-        tube0Number++;
-        tube1Number++;
-        tube2Number++;
-        tube3Number++;
-
-        if(tube0Number > 10) {
-            tube0Number = 0;
-            tube1Number = 0;
-            tube2Number = 0;
-            tube3Number = 0;
-        }
-
-        updateTubes();
 	}
 }
 
@@ -128,7 +120,7 @@ void setUpTubeDriverInterface() {
 	// PORTB.3	LOAD
 	// PORTB.2	CLK
 	// PORTB.1	BLANK
-	
+
 	// Set up all of the interface pins as output, outputs to 0
 	PORTB = 0x00;
 	DDRB = _BV(DDB4) | _BV(DDB3) | _BV(DDB2) | _BV(DDB1);
@@ -136,6 +128,56 @@ void setUpTubeDriverInterface() {
 
 void waitForTubeWarmup() {
 	_delay_ms(1000);
+}
+
+void setUpRealTimeClock() {
+    // Set up Timer 2 to use an external clock source
+    // and a prescaler of 128, which gives 1 overflow
+    // interrupt per second
+    TCCR2A = 0x00;
+    TCCR2B = 0x05;
+
+    // Clear Timer 2's counter
+    TCNT2 = 0;
+
+    // Enable the overflow interrupt
+    TIMSK2 |= 0x01;
+
+    // Enable asynchronous mode for the timer
+    ASSR = 0x20;
+
+    // Enable global interrupts
+    sei();
+}
+
+ISR(TIMER2_OVF_vect) {
+    // Happens once per second
+    updateTime();
+}
+
+void updateTime() {
+    tube3Number++;
+
+    if(tube3Number > 9) {
+        tube3Number = 0;
+        tube2Number++;
+
+        if(tube2Number > 5) {
+            tube2Number = 0;
+            tube1Number++;
+
+            if(tube1Number > 9) {
+                tube1Number = 0;
+                tube0Number++;
+
+                if(tube0Number > 9) {
+                    tube0Number = 0;
+                }
+            }
+        }
+    }
+
+    updateTubes();
 }
 
 void updateTubes() {
@@ -167,7 +209,7 @@ void sendBitsToTubeDriversToDisplayNumber(int8_t number) {
     if(number < 0 || number > 9) {
         for(uint8_t i = 0; i < 8; i++) {
             sendBitToTubeDrivers(0);
-        } 
+        }
     } else {
         for(int8_t i = 7; i >= 0; i--) {
             sendBitToTubeDrivers(numberPatterns[number][i]);
