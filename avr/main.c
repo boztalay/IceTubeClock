@@ -71,6 +71,11 @@ int8_t tube1Number;
 int8_t tube2Number;
 int8_t tube3Number;
 
+// Global to keep track of how many seconds
+// have passed
+
+uint8_t secondsPassed;
+
 // Function declarations
 
 void setUpSystemClock(void);
@@ -100,6 +105,8 @@ int main(void) {
     tube3Number = 0;
 
     setUpRealTimeClock();
+
+    updateTubes();
 
 	while(1) {
 
@@ -146,13 +153,20 @@ void setUpRealTimeClock() {
     // Enable asynchronous mode for the timer
     ASSR = 0x20;
 
+    // Reset the seconds counter
+    secondsPassed = 0;
+
     // Enable global interrupts
     sei();
 }
 
 ISR(TIMER2_OVF_vect) {
     // Happens once per second
-    updateTime();
+    secondsPassed++;
+    if(secondsPassed >= 60) {
+        secondsPassed = 0;
+        updateTime();
+    }
 }
 
 void updateTime() {
