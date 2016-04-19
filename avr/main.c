@@ -5,13 +5,84 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
+// Drivers are connected to the tubes like so:
+// OUT0	NC
+// OUT1     Tube 0 A
+// OUT2     Tube 0 B
+// OUT3     Tube 0 C
+// OUT4     Tube 0 D
+// OUT5     Tube 0 E
+// OUT6     Tube 0 F
+// OUT7     Tube 0 G
+// OUT8     Tube 0 H
+// OUT9     Tube 0 GRID
+// OUT10    Tube 1 A
+// OUT11    Tube 1 B
+// OUT12    Tube 1 C
+// OUT13    Tube 1 D
+// OUT14    Tube 1 E
+// OUT15    Tube 1 F
+// OUT16    Tube 1 G
+// OUT17    Tube 1 H
+// OUT18    Tube 1 GRID
+// OUT19    NC
+// OUT0     NC
+// OUT1     Tube 2 A
+// OUT2     Tube 2 B
+// OUT3     Tube 2 C
+// OUT4     Tube 2 D
+// OUT5     Tube 2 E
+// OUT6     Tube 2 F
+// OUT7     Tube 2 G
+// OUT8     Tube 2 H
+// OUT9     Tube 2 GRID
+// OUT10    Tube 3 A
+// OUT11    Tube 3 B
+// OUT12    Tube 3 C
+// OUT13    Tube 3 D
+// OUT14    Tube 3 E
+// OUT15    Tube 3 F
+// OUT16    Tube 3 G
+// OUT17    Tube 3 H
+// OUT18    Tube 3 GRID
+// OUT19    NC
+
+// Patterns for each number on the tubes
+
+uint8_t numberPatterns[10][8] = {
+  // A  B  C  D  E  F  G  H
+    {1, 1, 1, 0, 1, 1, 0, 1}, // 0
+    {0, 0, 0, 0, 0, 1, 0, 1}, // 1
+    {1, 1, 0, 1, 1, 1, 0, 0}, // 2
+    {1, 0, 0, 1, 1, 1, 0, 1}, // 3
+    {0, 0, 1, 1, 0, 1, 0, 1}, // 4
+    {1, 0, 1, 1, 1, 0, 0, 1}, // 5
+    {1, 1, 1, 1, 1, 0, 0, 1}, // 6
+    {0, 0, 0, 0, 1, 1, 0, 1}, // 7
+    {1, 1, 1, 1, 1, 1, 0, 1}, // 8
+    {0, 0, 1, 1, 1, 1, 0, 1}, // 9
+};
+
+// Globals for what each tube is displaying
+
+int8_t tube0Number;
+int8_t tube1Number;
+int8_t tube2Number;
+int8_t tube3Number;
+
+// Function declarations
+
 void setUpSystemClock(void);
 
 void setUpTubeDriverInterface(void);
 void waitForTubeWarmup(void);
 
+void updateTubes(void);
+void sendBitsToTubeDriversToDisplayNumber(int8_t);
 void sendBitToTubeDrivers(uint8_t);
 void latchTubeDrivers(void);
+
+// Main
 
 int main(void) {
 	setUpSystemClock();
@@ -19,91 +90,27 @@ int main(void) {
 
 	waitForTubeWarmup();
 
-	// Drivers are connected to the tubes like so:
-	// OUT0	NC
-	// OUT1	Tube 0 A
-	// OUT2	Tube 0 B
-	// OUT3	Tube 0 C
-	// OUT4	Tube 0 D
-	// OUT5	Tube 0 E
-	// OUT6	Tube 0 F
-	// OUT7	Tube 0 G
-	// OUT8	Tube 0 H
-	// OUT9	Tube 0 GRID
-	// OUT10	Tube 1 A
-	// OUT11	Tube 1 B
-	// OUT12	Tube 1 C
-	// OUT13	Tube 1 D
-	// OUT14	Tube 1 E
-	// OUT15	Tube 1 F
-	// OUT16	Tube 1 G
-	// OUT17	Tube 1 H
-	// OUT18	Tube 1 GRID
-	// OUT19	NC
-	// OUT0	NC
-	// OUT1	Tube 2 A
-	// OUT2	Tube 2 B
-	// OUT3	Tube 2 C
-	// OUT4	Tube 2 D
-	// OUT5	Tube 2 E
-	// OUT6	Tube 2 F
-	// OUT7	Tube 2 G
-	// OUT8	Tube 2 H
-	// OUT9	Tube 2 GRID
-	// OUT10	Tube 3 A
-	// OUT11	Tube 3 B
-	// OUT12	Tube 3 C
-	// OUT13	Tube 3 D
-	// OUT14	Tube 3 E
-	// OUT15	Tube 3 F
-	// OUT16	Tube 3 G
-	// OUT17	Tube 3 H
-	// OUT18	Tube 3 GRID
-	// OUT19	NC
-
-	sendBitToTubeDrivers(1);	// Tube 3 GRID
-	sendBitToTubeDrivers(1);	// Tube 3 H
-	sendBitToTubeDrivers(0);	// Tube 3 G
-	sendBitToTubeDrivers(1);	// Tube 3 F
-	sendBitToTubeDrivers(0);	// Tube 3 E
-	sendBitToTubeDrivers(1);	// Tube 3 D
-	sendBitToTubeDrivers(1);	// Tube 3 C
-	sendBitToTubeDrivers(0);	// Tube 3 B
-	sendBitToTubeDrivers(0);	// Tube 3 A
-	sendBitToTubeDrivers(1);	// Tube 2 GRID
-	sendBitToTubeDrivers(0);	// Tube 2 H
-	sendBitToTubeDrivers(0);	// Tube 2 G
-	sendBitToTubeDrivers(1);	// Tube 2 F
-	sendBitToTubeDrivers(1);	// Tube 2 E
-	sendBitToTubeDrivers(1);	// Tube 2 D
-	sendBitToTubeDrivers(0);	// Tube 2 C
-	sendBitToTubeDrivers(1);	// Tube 2 B
-	sendBitToTubeDrivers(1);	// Tube 2 A
-	sendBitToTubeDrivers(0);	// NC
-	sendBitToTubeDrivers(0);	// NC
-	sendBitToTubeDrivers(1);	// Tube 1 GRID
-	sendBitToTubeDrivers(0);	// Tube 1 H
-	sendBitToTubeDrivers(0);	// Tube 1 G
-	sendBitToTubeDrivers(1);	// Tube 1 F
-	sendBitToTubeDrivers(1);	// Tube 1 E
-	sendBitToTubeDrivers(1);	// Tube 1 D
-	sendBitToTubeDrivers(0);	// Tube 1 C
-	sendBitToTubeDrivers(1);	// Tube 1 B
-	sendBitToTubeDrivers(1);	// Tube 1 A
-	sendBitToTubeDrivers(1);	// Tube 0 GRID
-	sendBitToTubeDrivers(1);	// Tube 0 H
-	sendBitToTubeDrivers(0);	// Tube 0 G
-	sendBitToTubeDrivers(1);	// Tube 0 F
-	sendBitToTubeDrivers(0);	// Tube 0 E
-	sendBitToTubeDrivers(1);	// Tube 0 D
-	sendBitToTubeDrivers(1);	// Tube 0 C
-	sendBitToTubeDrivers(0);	// Tube 0 B
-	sendBitToTubeDrivers(0);	// Tube 0 A
-	sendBitToTubeDrivers(0);	// NC, need it to push everything up
-	latchTubeDrivers();
+    tube0Number = 0;
+    tube1Number = 0;
+    tube2Number = 0;
+    tube3Number = 0;
 
 	while(1) {
-// 		process_boostSupplyVoltageMonitor();
+        _delay_ms(500);
+
+        tube0Number++;
+        tube1Number++;
+        tube2Number++;
+        tube3Number++;
+
+        if(tube0Number > 10) {
+            tube0Number = 0;
+            tube1Number = 0;
+            tube2Number = 0;
+            tube3Number = 0;
+        }
+
+        updateTubes();
 	}
 }
 
@@ -129,6 +136,43 @@ void setUpTubeDriverInterface() {
 
 void waitForTubeWarmup() {
 	_delay_ms(1000);
+}
+
+void updateTubes() {
+	sendBitToTubeDrivers(1);	// Tube 3 GRID
+
+    sendBitsToTubeDriversToDisplayNumber(tube3Number);
+
+	sendBitToTubeDrivers(1);	// Tube 2 GRID
+
+    sendBitsToTubeDriversToDisplayNumber(tube2Number);
+
+	sendBitToTubeDrivers(0);	// NC
+	sendBitToTubeDrivers(0);	// NC
+
+	sendBitToTubeDrivers(1);	// Tube 1 GRID
+
+    sendBitsToTubeDriversToDisplayNumber(tube1Number);
+
+	sendBitToTubeDrivers(1);	// Tube 0 GRID
+
+    sendBitsToTubeDriversToDisplayNumber(tube0Number);
+
+	sendBitToTubeDrivers(0);	// NC, need it to push everything up
+
+	latchTubeDrivers();
+}
+
+void sendBitsToTubeDriversToDisplayNumber(int8_t number) {
+    if(number < 0 || number > 9) {
+        for(uint8_t i = 0; i < 8; i++) {
+            sendBitToTubeDrivers(0);
+        } 
+    } else {
+        for(int8_t i = 7; i >= 0; i--) {
+            sendBitToTubeDrivers(numberPatterns[number][i]);
+        }
+    }
 }
 
 void sendBitToTubeDrivers(uint8_t bit) {
