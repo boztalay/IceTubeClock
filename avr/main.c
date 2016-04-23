@@ -214,6 +214,8 @@ void checkKnobs() {
                 tube0Number = 1;
             }
         }
+
+        updateTubes();
     } else if(hourKnobMovement == DECREMENT) {
         tube1Number--;
 
@@ -226,6 +228,8 @@ void checkKnobs() {
                 tube1Number = 9;
             }
         }
+
+        updateTubes();
     }
 
     if(minuteKnobMovement == INCREMENT) {
@@ -239,6 +243,8 @@ void checkKnobs() {
                 tube2Number = 0;
             }
         }
+
+        updateTubes();
     } else if(minuteKnobMovement == DECREMENT) {
         tube3Number--;
 
@@ -250,6 +256,8 @@ void checkKnobs() {
                 tube2Number = 5;
             }
         }
+
+        updateTubes();
     }
 }
 
@@ -268,17 +276,21 @@ void checkKnobStateForEdges(KnobState* knobState) {
 }
 
 KnobMovement checkKnobStateForMovement(KnobState* knobState) {
-    if(knobState->channelAEdge == RISING) {
-        return (knobState->channelB == 1) ? INCREMENT : DECREMENT;
-    } else if(knobState->channelAEdge == FALLING) {
+    // Only paying attention to one edge because that's where
+    // the detents in the knob are
+
+    /*if(knobState->channelAEdge == RISING) {*/
+        /*return (knobState->channelB == 1) ? INCREMENT : DECREMENT;*/
+    /*}*/
+    if(knobState->channelAEdge == FALLING) {
         return (knobState->channelB == 0) ? INCREMENT : DECREMENT;
     }
 
-    if(knobState->channelBEdge == RISING) {
-        return (knobState->channelA == 0) ? INCREMENT : DECREMENT;
-    } else if(knobState->channelBEdge == FALLING) {
-        return (knobState->channelA == 1) ? INCREMENT : DECREMENT;
-    }
+    /*if(knobState->channelBEdge == RISING) {*/
+        /*return (knobState->channelA == 0) ? INCREMENT : DECREMENT;*/
+    /*} else if(knobState->channelBEdge == FALLING) {*/
+        /*return (knobState->channelA == 1) ? INCREMENT : DECREMENT;*/
+    /*}*/
 
     return NONE;
 }
@@ -325,11 +337,11 @@ void setUpRealTimeClock() {
 ISR(TIMER2_OVF_vect) {
     // Happens once per second
     secondsPassed++;
+
     if(secondsPassed >= 60) {
         secondsPassed = 0;
-        /*updateTime();*/
+        updateTime();
     }
-    updateTime();
 }
 
 void updateTime() {
