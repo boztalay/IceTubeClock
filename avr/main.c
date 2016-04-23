@@ -76,9 +76,43 @@ int8_t tube3Number;
 
 uint8_t secondsPassed;
 
+// Struct and globals to keep track of the state
+// of the hour and minute knobs
+
+typedef enum {
+    NONE,
+    INCREMENT,
+    DECREMENT
+} KnobMovement;
+
+typedef enum {
+    NO_EDGE,
+    RISING,
+    FALLING
+} KnobChannelEdge;
+
+typedef struct {
+    uint8_t lastChannelA;
+    uint8_t channelA;
+    KnobChannelEdge channelAEdge;
+
+    uint8_t lastChannelB;
+    uint8_t channelB;
+    KnobChannelEdge channelBEdge;
+} KnobState;
+
+KnobState hourKnobState;
+KnobState minuteKnobState;
+
 // Function declarations
 
 void setUpSystemClock(void);
+
+void setUpKnobInterface(void);
+void readKnobs(void);
+void checkKnobs(void);
+void checkKnobStateForEdges(KnobState*);
+KnobMovement checkKnobStateForMovement(KnobState*);
 
 void setUpTubeDriverInterface(void);
 void waitForTubeWarmup(void);
@@ -95,11 +129,12 @@ void latchTubeDrivers(void);
 
 int main(void) {
 	setUpSystemClock();
+    setUpKnobInterface();
 	setUpTubeDriverInterface();
 
 	waitForTubeWarmup();
 
-    tube0Number = 0;
+    tube0Number = -1;
     tube1Number = 0;
     tube2Number = 0;
     tube3Number = 0;
@@ -109,7 +144,7 @@ int main(void) {
     updateTubes();
 
 	while(1) {
-
+        checkKnobs();
 	}
 }
 
@@ -121,6 +156,133 @@ void setUpSystemClock() {
 	CLKPR = 0x00;
 }
 
+void setUpKnobInterface() {
+    // Pins
+    // PORTC.0  Hour Knob A
+    // PORTC.1  Hour Knob B
+    // PORTC.2  Minute Knob A
+    // PORTC.3  Minute Knob B
+
+    // Set up all of the interface pins as inputs with no pull-up resistors
+    DDRC = 0x00;
+    PORTC = 0x00;
+
+    // Take an initial reading of the knobs
+    readKnobs();
+}
+
+void readKnobs() {
+    // Copy the current states over into the last states
+    hourKnobState.lastChannelA = hourKnobState.channelA;
+    hourKnobState.lastChannelB = hourKnobState.channelB;
+    minuteKnobState.lastChannelA = minuteKnobState.channelA;
+    minuteKnobState.lastChannelB = minuteKnobState.channelB;
+
+    // Read the current states
+    hourKnobState.channelA = (PINC & _BV(PINC0)) ? 1 : 0;
+    hourKnobState.channelB = (PINC & _BV(PINC1)) ? 1 : 0;
+    minuteKnobState.channelA = (PINC & _BV(PINC2)) ? 1 : 0;
+    minuteKnobState.channelB = (PINC & _BV(PINC3)) ? 1 : 0;
+}
+
+void checkKnobs() {
+    // First read the current state of the knob pins
+    readKnobs();
+
+    // Check if any of the knob pins have changed state
+    checkKnobStateForEdges(&hourKnobState);
+    checkKnobStateForEdges(&minuteKnobState);
+
+    // Check if either of the knobs have registered movement
+    KnobMovement hourKnobMovement = checkKnobStateForMovement(&hourKnobState);
+    KnobMovement minuteKnobMovement = checkKnobStateForMovement(&minuteKnobState);
+
+    // Handle increments and decrements accordingly
+    // This is gross, needs to be redone
+
+    if(hourKnobMovement == INCREMENT) {
+        tube1Number++;
+
+        if(tube0Number == 1) {
+            if(tube1Number > 2) {
+                tube1Number = 0;
+                tube0Number = -1; // Blank
+            }
+        } else {
+            if(tube1Number > 9) {
+                tube1Number = 0;
+                tube0Number = 1;
+            }
+        }
+    } else if(hourKnobMovement == DECREMENT) {
+        tube1Number--;
+
+        if(tube1Number < 0) {
+            if(tube0Number == -1) {
+                tube0Number = 1;
+                tube1Number = 2;
+            } else {
+                tube0Number = -1;
+                tube1Number = 9;
+            }
+        }
+    }
+
+    if(minuteKnobMovement == INCREMENT) {
+        tube3Number++;
+
+        if(tube3Number > 9) {
+            tube3Number = 0;
+            tube2Number++;
+
+            if(tube2Number > 5) {
+                tube2Number = 0;
+            }
+        }
+    } else if(minuteKnobMovement == DECREMENT) {
+        tube3Number--;
+
+        if(tube3Number < 0) {
+            tube3Number = 9;
+            tube2Number--;
+
+            if(tube2Number < 0) {
+                tube2Number = 5;
+            }
+        }
+    }
+}
+
+void checkKnobStateForEdges(KnobState* knobState) {
+    if(knobState->lastChannelA != knobState->channelA) {
+        knobState->channelAEdge = (knobState->channelA == 1) ? RISING : FALLING;
+    } else {
+        knobState->channelAEdge = NO_EDGE;
+    }
+
+    if(knobState->lastChannelB != knobState->channelB) {
+        knobState->channelBEdge = (knobState->channelB == 1) ? RISING : FALLING;
+    } else {
+        knobState->channelBEdge = NO_EDGE;
+    }
+}
+
+KnobMovement checkKnobStateForMovement(KnobState* knobState) {
+    if(knobState->channelAEdge == RISING) {
+        return (knobState->channelB == 1) ? INCREMENT : DECREMENT;
+    } else if(knobState->channelAEdge == FALLING) {
+        return (knobState->channelB == 0) ? INCREMENT : DECREMENT;
+    }
+
+    if(knobState->channelBEdge == RISING) {
+        return (knobState->channelA == 0) ? INCREMENT : DECREMENT;
+    } else if(knobState->channelBEdge == FALLING) {
+        return (knobState->channelA == 1) ? INCREMENT : DECREMENT;
+    }
+
+    return NONE;
+}
+
 void setUpTubeDriverInterface() {
 	// Pins
 	// PORTB.4	DIN
@@ -129,8 +291,8 @@ void setUpTubeDriverInterface() {
 	// PORTB.1	BLANK
 
 	// Set up all of the interface pins as output, outputs to 0
-	PORTB = 0x00;
 	DDRB = _BV(DDB4) | _BV(DDB3) | _BV(DDB2) | _BV(DDB1);
+	PORTB = 0x00;
 }
 
 void waitForTubeWarmup() {
@@ -165,8 +327,9 @@ ISR(TIMER2_OVF_vect) {
     secondsPassed++;
     if(secondsPassed >= 60) {
         secondsPassed = 0;
-        updateTime();
+        /*updateTime();*/
     }
+    updateTime();
 }
 
 void updateTime() {
@@ -180,12 +343,15 @@ void updateTime() {
             tube2Number = 0;
             tube1Number++;
 
-            if(tube1Number > 9) {
-                tube1Number = 0;
-                tube0Number++;
-
-                if(tube0Number > 9) {
-                    tube0Number = 0;
+            if(tube0Number == 1) {
+                if(tube1Number > 2) {
+                    tube1Number = 0;
+                    tube0Number = -1; // Blank
+                }
+            } else {
+                if(tube1Number > 9) {
+                    tube1Number = 0;
+                    tube0Number = 1;
                 }
             }
         }
