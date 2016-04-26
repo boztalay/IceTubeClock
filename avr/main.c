@@ -6,47 +6,8 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 
-// Drivers are connected to the tubes like so:
-// OUT0	NC
-// OUT1     Tube 0 A
-// OUT2     Tube 0 B
-// OUT3     Tube 0 C
-// OUT4     Tube 0 D
-// OUT5     Tube 0 E
-// OUT6     Tube 0 F
-// OUT7     Tube 0 G
-// OUT8     Tube 0 H
-// OUT9     Tube 0 GRID
-// OUT10    Tube 1 A
-// OUT11    Tube 1 B
-// OUT12    Tube 1 C
-// OUT13    Tube 1 D
-// OUT14    Tube 1 E
-// OUT15    Tube 1 F
-// OUT16    Tube 1 G
-// OUT17    Tube 1 H
-// OUT18    Tube 1 GRID
-// OUT19    NC
-// OUT0     NC
-// OUT1     Tube 2 A
-// OUT2     Tube 2 B
-// OUT3     Tube 2 C
-// OUT4     Tube 2 D
-// OUT5     Tube 2 E
-// OUT6     Tube 2 F
-// OUT7     Tube 2 G
-// OUT8     Tube 2 H
-// OUT9     Tube 2 GRID
-// OUT10    Tube 3 A
-// OUT11    Tube 3 B
-// OUT12    Tube 3 C
-// OUT13    Tube 3 D
-// OUT14    Tube 3 E
-// OUT15    Tube 3 F
-// OUT16    Tube 3 G
-// OUT17    Tube 3 H
-// OUT18    Tube 3 GRID
-// OUT19    NC
+// NOTE: Programming command is of the form
+//  avrdude -p m168 -P /dev/cu.usbmodem14111 -c avrisp -b 19200 -U flash:w:main.hex
 
 // Patterns for each number on the tubes
 
@@ -64,12 +25,10 @@ uint8_t numberPatterns[10][8] = {
     {1, 0, 1, 1, 1, 1, 0, 1}, // 9
 };
 
-// Globals for what each tube is displaying
+// Globals for keeping track of the current time
 
-int8_t tube0Number;
-int8_t tube1Number;
-int8_t tube2Number;
-int8_t tube3Number;
+int8_t hours;
+int8_t minutes;
 
 // Global to keep track of how many seconds
 // have passed
@@ -114,14 +73,19 @@ void checkKnobs(void);
 void checkKnobStateForEdges(KnobState*);
 KnobMovement checkKnobStateForMovement(KnobState*);
 
-void setUpTubeDriverInterface(void);
-void waitForTubeWarmup(void);
-
 void setUpRealTimeClock(void);
 void updateTime(void);
+void incrementTime(void);
+uint8_t incrementMinutes(void);
+uint8_t incrementHours(void);
+uint8_t decrementMinutes(void);
+uint8_t decrementHours(void);
 
+
+void setUpTubeDriverInterface(void);
+void waitForTubeWarmup(void);
 void updateTubes(void);
-void sendBitsToTubeDriversToDisplayNumber(int8_t);
+void sendBitsToTubeDriversToDisplayNumber(int8_t, uint8_t);
 void sendBitToTubeDrivers(uint8_t);
 void latchTubeDrivers(void);
 
@@ -134,19 +98,20 @@ int main(void) {
 
 	waitForTubeWarmup();
 
-    tube0Number = -1;
-    tube1Number = 0;
-    tube2Number = 0;
-    tube3Number = 0;
+    hours = 12;
+    minutes = 0;
 
     setUpRealTimeClock();
 
     updateTubes();
 
 	while(1) {
+        _delay_ms(3); // Quick and dirty debounce on the knobs
         checkKnobs();
 	}
 }
+
+// Initialization
 
 void setUpSystemClock() {
 	// Notify it that we want to change the prescaler
@@ -155,6 +120,8 @@ void setUpSystemClock() {
 	// Set the prescaler to 1 (should give us 8MHz)
 	CLKPR = 0x00;
 }
+
+// Interfacing with the hour and minute adjustment knobs
 
 void setUpKnobInterface() {
     // Pins
@@ -201,62 +168,18 @@ void checkKnobs() {
     // This is gross, needs to be redone
 
     if(hourKnobMovement == INCREMENT) {
-        tube1Number++;
-
-        if(tube0Number == 1) {
-            if(tube1Number > 2) {
-                tube1Number = 0;
-                tube0Number = -1; // Blank
-            }
-        } else {
-            if(tube1Number > 9) {
-                tube1Number = 0;
-                tube0Number = 1;
-            }
-        }
-
+        incrementHours();
         updateTubes();
     } else if(hourKnobMovement == DECREMENT) {
-        tube1Number--;
-
-        if(tube1Number < 0) {
-            if(tube0Number == -1) {
-                tube0Number = 1;
-                tube1Number = 2;
-            } else {
-                tube0Number = -1;
-                tube1Number = 9;
-            }
-        }
-
+        decrementHours();
         updateTubes();
     }
 
     if(minuteKnobMovement == INCREMENT) {
-        tube3Number++;
-
-        if(tube3Number > 9) {
-            tube3Number = 0;
-            tube2Number++;
-
-            if(tube2Number > 5) {
-                tube2Number = 0;
-            }
-        }
-
+        incrementMinutes();
         updateTubes();
     } else if(minuteKnobMovement == DECREMENT) {
-        tube3Number--;
-
-        if(tube3Number < 0) {
-            tube3Number = 9;
-            tube2Number--;
-
-            if(tube2Number < 0) {
-                tube2Number = 5;
-            }
-        }
-
+        decrementMinutes();
         updateTubes();
     }
 }
@@ -276,40 +199,22 @@ void checkKnobStateForEdges(KnobState* knobState) {
 }
 
 KnobMovement checkKnobStateForMovement(KnobState* knobState) {
-    // Only paying attention to one edge because that's where
-    // the detents in the knob are
+    // Not doing classic quadrature decoding so that I can tune
+    // the feel of the knobs for incrementing and decrementing.
+    // Different parts of the quadrature cycle match the detents
+    // on the knobs for incrementing or decrementing.
 
-    /*if(knobState->channelAEdge == RISING) {*/
-        /*return (knobState->channelB == 1) ? INCREMENT : DECREMENT;*/
-    /*}*/
-    if(knobState->channelAEdge == FALLING) {
-        return (knobState->channelB == 0) ? INCREMENT : DECREMENT;
+    if(knobState->channelAEdge == RISING && knobState->channelB == 1) {
+        return DECREMENT;
     }
-
-    /*if(knobState->channelBEdge == RISING) {*/
-        /*return (knobState->channelA == 0) ? INCREMENT : DECREMENT;*/
-    /*} else if(knobState->channelBEdge == FALLING) {*/
-        /*return (knobState->channelA == 1) ? INCREMENT : DECREMENT;*/
-    /*}*/
+    if(knobState->channelBEdge == RISING && knobState->channelA == 1) {
+        return INCREMENT;
+    }
 
     return NONE;
 }
 
-void setUpTubeDriverInterface() {
-	// Pins
-	// PORTB.4	DIN
-	// PORTB.3	LOAD
-	// PORTB.2	CLK
-	// PORTB.1	BLANK
-
-	// Set up all of the interface pins as output, outputs to 0
-	DDRB = _BV(DDB4) | _BV(DDB3) | _BV(DDB2) | _BV(DDB1);
-	PORTB = 0x00;
-}
-
-void waitForTubeWarmup() {
-	_delay_ms(1000);
-}
+// Keeping track of time
 
 void setUpRealTimeClock() {
     // Set up Timer 2 to use an external clock source
@@ -345,62 +250,159 @@ ISR(TIMER2_OVF_vect) {
 }
 
 void updateTime() {
-    tube3Number++;
-
-    if(tube3Number > 9) {
-        tube3Number = 0;
-        tube2Number++;
-
-        if(tube2Number > 5) {
-            tube2Number = 0;
-            tube1Number++;
-
-            if(tube0Number == 1) {
-                if(tube1Number > 2) {
-                    tube1Number = 0;
-                    tube0Number = -1; // Blank
-                }
-            } else {
-                if(tube1Number > 9) {
-                    tube1Number = 0;
-                    tube0Number = 1;
-                }
-            }
-        }
-    }
-
+    incrementTime();
     updateTubes();
 }
 
+void incrementTime() {
+    uint8_t minutesOverflow = incrementMinutes();
+    if(minutesOverflow == 1) {
+        incrementHours();
+    }
+}
+
+uint8_t incrementMinutes() {
+    minutes++;
+
+    if(minutes > 59) {
+        minutes = 0;
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+uint8_t incrementHours() {
+    hours++;
+
+    if(hours > 12) {
+        hours = 1;
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+uint8_t decrementMinutes() {
+    minutes--;
+
+    if(minutes < 0) {
+        minutes = 59;
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+uint8_t decrementHours() {
+    hours--;
+
+    if(hours < 1) {
+         hours = 12;
+         return 1;
+    } else {
+         return 0;
+    }
+}
+
+// Interfacing with the tube drivers
+
+// Drivers are connected to the tubes like so:
+// OUT0     Tube 0 A
+// OUT1     Tube 0 B
+// OUT2     Tube 0 C
+// OUT3     Tube 0 D
+// OUT4     Tube 0 E
+// OUT5     Tube 0 F
+// OUT6     Tube 0 G
+// OUT7     Tube 0 H
+// OUT8     Tube 1 A
+// OUT9     Tube 1 B
+// OUT10    Tube 1 C
+// OUT11    Tube 1 D
+// OUT12    Tube 1 E
+// OUT13    Tube 1 F
+// OUT14    Tube 1 G
+// OUT15    Tube 1 H
+// OUT16    NC
+// OUT17    NC
+// OUT18    NC
+// OUT19    NC
+// OUT0     Tube 3 H
+// OUT1     Tube 3 G
+// OUT2     Tube 3 F
+// OUT3     Tube 3 E
+// OUT4     Tube 3 D
+// OUT5     Tube 3 C
+// OUT6     Tube 3 B
+// OUT7     Tube 3 A
+// OUT8     Tube 2 H
+// OUT9     Tube 2 G
+// OUT10    Tube 2 F
+// OUT11    Tube 2 E
+// OUT12    Tube 2 D
+// OUT13    Tube 2 C
+// OUT14    Tube 2 B
+// OUT15    Tube 2 A
+// OUT16    NC
+// OUT17    NC
+// OUT18    NC
+// OUT19    NC
+
+void setUpTubeDriverInterface() {
+	// Pins     PCB         Breadboard
+	// PORTB.4	CLK         (DIN)
+	// PORTB.3	DIN         (LOAD)
+	// PORTB.2	LOAD        (CLK)
+	// PORTB.1	BLANK       (BLANK)
+
+	// Set up all of the interface pins as output, outputs to 0
+	DDRB = _BV(DDB4) | _BV(DDB3) | _BV(DDB2) | _BV(DDB1);
+	PORTB = 0x00;
+}
+
+void waitForTubeWarmup() {
+	_delay_ms(1000);
+}
+
 void updateTubes() {
-	sendBitToTubeDrivers(1);	// Tube 3 GRID
+    int8_t hoursTensDigit = hours / 10;
+    int8_t hoursOnesDigit = hours - (hoursTensDigit * 10);
+    int8_t minutesTensDigit = minutes / 10;
+    int8_t minutesOnesDigit = minutes - (minutesTensDigit * 10);
 
-    sendBitsToTubeDriversToDisplayNumber(tube3Number);
-
-	sendBitToTubeDrivers(1);	// Tube 2 GRID
-
-    sendBitsToTubeDriversToDisplayNumber(tube2Number);
+    if(hoursTensDigit == 0) {
+        // Blank the hours tens digit if it's 0
+        hoursTensDigit = -1;
+    }
 
 	sendBitToTubeDrivers(0);	// NC
 	sendBitToTubeDrivers(0);	// NC
+	sendBitToTubeDrivers(0);	// NC
+	sendBitToTubeDrivers(0);	// NC
 
-	sendBitToTubeDrivers(1);	// Tube 1 GRID
+    sendBitsToTubeDriversToDisplayNumber(minutesTensDigit, 0);
+    sendBitsToTubeDriversToDisplayNumber(minutesOnesDigit, 0);
 
-    sendBitsToTubeDriversToDisplayNumber(tube1Number);
+	sendBitToTubeDrivers(0);	// NC
+	sendBitToTubeDrivers(0);	// NC
+	sendBitToTubeDrivers(0);	// NC
+	sendBitToTubeDrivers(0);	// NC
 
-	sendBitToTubeDrivers(1);	// Tube 0 GRID
-
-    sendBitsToTubeDriversToDisplayNumber(tube0Number);
-
-	sendBitToTubeDrivers(0);	// NC, need it to push everything up
+    sendBitsToTubeDriversToDisplayNumber(hoursOnesDigit, 1);
+    sendBitsToTubeDriversToDisplayNumber(hoursTensDigit, 1);
 
 	latchTubeDrivers();
 }
 
-void sendBitsToTubeDriversToDisplayNumber(int8_t number) {
+void sendBitsToTubeDriversToDisplayNumber(int8_t number, uint8_t direction) {
     if(number < 0 || number > 9) {
         for(uint8_t i = 0; i < 8; i++) {
             sendBitToTubeDrivers(0);
+        }
+    } else if(direction == 0) {
+        for(int8_t i = 0; i < 8; i++) {
+            sendBitToTubeDrivers(numberPatterns[number][i]);
         }
     } else {
         for(int8_t i = 7; i >= 0; i--) {
@@ -413,20 +415,20 @@ void sendBitToTubeDrivers(uint8_t bit) {
 	// Set DIN according to the bit
 	if(bit == 0) {
 		// Set DIN to 0
-		PORTB &= ~_BV(PINB4);
+		PORTB &= ~_BV(PINB3);
 	} else {
 		// Set DIN to 1
-		PORTB |= _BV(PINB4);
+		PORTB |= _BV(PINB3);
 	}
 
 	// Toggle the clock, 1 then 0
-	PORTB |= _BV(PINB2);
-	PORTB &= ~_BV(PINB2);
+	PORTB |= _BV(PINB4);
+	PORTB &= ~_BV(PINB4);
 }
 
 void latchTubeDrivers() {
 	// Toggle LATCH, 1 then 0
-	PORTB |= _BV(PINB3);
-	PORTB &= ~_BV(PINB3);
+	PORTB |= _BV(PINB2);
+	PORTB &= ~_BV(PINB2);
 }
 
