@@ -1,4 +1,4 @@
 IceTubeClock
 ============
 
-A Bluetooth-enabled ice tube clock
+A clock with ice tubes for its display
